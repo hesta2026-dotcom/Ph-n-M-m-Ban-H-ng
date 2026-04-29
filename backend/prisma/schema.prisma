@@ -1,0 +1,280 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ===================== USER / AUTH =====================
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  phone     String?
+  role      String   @default("STAFF")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders      Order[]
+  auditLogs   AuditLog[]
+  shifts      Shift[]
+  expenses    Expense[]
+  receipts    Receipt[]
+}
+
+// ===================== CATEGORY =====================
+model Category {
+  id        String    @id @default(uuid())
+  name      String
+  slug      String    @unique
+  parentId  String?
+  parent    Category? @relation("SubCategory", fields: [parentId], references: [id])
+  children  Category[] @relation("SubCategory")
+  products  Product[]
+  createdAt DateTime  @default(now())
+}
+
+// ===================== SUPPLIER =====================
+model Supplier {
+  id        String    @id @default(uuid())
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  taxCode   String?
+  debt      Float     @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  products       Product[]
+  purchaseOrders PurchaseOrder[]
+  debts          Debt[]
+}
+
+// ===================== PRODUCT =====================
+model Product {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  barcode     String?  @unique
+  description String?
+  image       String?
+  price       Float
+  costPrice   Float    @default(0)
+  stock       Int      @default(0)
+  minStock    Int      @default(5)
+  unit        String   @default("cái")
+  isActive    Boolean  @default(true)
+  categoryId  String?
+  supplierId  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category        Category?       @relation(fields: [categoryId], references: [id])
+  supplier        Supplier?       @relation(fields: [supplierId], references: [id])
+  orderItems      OrderItem[]
+  purchaseItems   PurchaseItem[]
+  channelProducts ChannelProduct[]
+  stockLogs       StockLog[]
+}
+
+// ===================== CUSTOMER =====================
+model Customer {
+  id         String   @id @default(uuid())
+  name       String
+  phone      String?  @unique
+  email      String?
+  address    String?
+  points     Int      @default(0)
+  totalSpent Float    @default(0)
+  debt       Float    @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  orders Order[]
+  debts  Debt[]
+}
+
+// ===================== ORDER / POS =====================
+model Order {
+  id            String   @id @default(uuid())
+  orderCode     String   @unique
+  customerId    String?
+  userId        String
+  status        String   @default("PENDING")
+  paymentMethod String   @default("CASH")
+  subtotal      Float
+  discount      Float    @default(0)
+  tax           Float    @default(0)
+  total         Float
+  amountPaid    Float    @default(0)
+  change        Float    @default(0)
+  note          String?
+  channel       String   @default("store")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  customer Customer?   @relation(fields: [customerId], references: [id])
+  user     User        @relation(fields: [userId], references: [id])
+  items    OrderItem[]
+  debt     Debt?
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  productId String
+  qty       Int
+  price     Float
+  discount  Float   @default(0)
+  total     Float
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+}
+
+// ===================== PURCHASE ORDER (NHẬP KHO) =====================
+model PurchaseOrder {
+  id         String   @id @default(uuid())
+  code       String   @unique
+  supplierId String
+  userId     String
+  status     String   @default("PENDING")
+  total      Float
+  paid       Float    @default(0)
+  debt       Float    @default(0)
+  note       String?
+  createdAt  DateTime @default(now())
+
+  supplier Supplier       @relation(fields: [supplierId], references: [id])
+  items    PurchaseItem[]
+}
+
+model PurchaseItem {
+  id              String @id @default(uuid())
+  purchaseOrderId String
+  productId       String
+  qty             Int
+  costPrice       Float
+  total           Float
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  product       Product       @relation(fields: [productId], references: [id])
+}
+
+// ===================== STOCK LOG (LỊCH SỬ KHO) =====================
+model StockLog {
+  id        String   @id @default(uuid())
+  productId String
+  type      String
+  qty       Int
+  before    Int
+  after     Int
+  note      String?
+  createdAt DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id])
+}
+
+// ===================== THU CHI =====================
+model Expense {
+  id          String   @id @default(uuid())
+  type        String
+  category    String
+  amount      Float
+  description String?
+  userId      String
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Receipt {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  type        String
+  amount      Float
+  description String?
+  userId      String
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// ===================== CÔNG NỢ =====================
+model Debt {
+  id         String    @id @default(uuid())
+  type       String
+  customerId String?
+  supplierId String?
+  orderId    String?   @unique
+  amount     Float
+  paid       Float     @default(0)
+  remaining  Float
+  dueDate    DateTime?
+  status     String    @default("UNPAID")
+  note       String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  customer Customer? @relation(fields: [customerId], references: [id])
+  supplier Supplier? @relation(fields: [supplierId], references: [id])
+  order    Order?    @relation(fields: [orderId], references: [id])
+}
+
+// ===================== ĐA KÊNH =====================
+model SalesChannel {
+  id       String @id @default(uuid())
+  name     String
+  type     String
+  apiKey   String?
+  isActive Boolean @default(true)
+
+  products ChannelProduct[]
+}
+
+model ChannelProduct {
+  id         String  @id @default(uuid())
+  channelId  String
+  productId  String
+  externalId String?
+  price      Float?
+  stock      Int?
+
+  channel SalesChannel @relation(fields: [channelId], references: [id])
+  product Product      @relation(fields: [productId], references: [id])
+
+  @@unique([channelId, productId])
+}
+
+// ===================== CA LÀM VIỆC =====================
+model Shift {
+  id        String    @id @default(uuid())
+  userId    String
+  startTime DateTime
+  endTime   DateTime?
+  openCash  Float     @default(0)
+  closeCash Float?
+  note      String?
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// ===================== AUDIT LOG =====================
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  entity    String
+  entityId  String?
+  oldData   String?
+  newData   String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
