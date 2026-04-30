@@ -2,11 +2,21 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../../services/api'
 import toast from 'react-hot-toast'
-import { Search, Plus, Minus, Trash2, X, User } from 'lucide-react'
+import { Search, Plus, Minus, Trash2, X, User, UserPlus } from 'lucide-react'
+import NewCustomerModal from '../customers/NewCustomerModal'
 
 const fmt = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
 
-interface CartItem { productId: string; name: string; code: string; price: number; qty: number; stock: number }
+interface CartItem {
+  productId: string; name: string; code: string
+  unitPrice: number   // giá gốc theo đơn vị nhỏ nhất
+  price: number       // giá hiển thị theo đơn vị đang chọn
+  qty: number; stock: number
+  unit: string
+  packageUnit: string | null
+  packageQty: number | null
+  selectedUnit: string
+}
 
 interface Props { onClose: () => void; onSuccess: (order: any) => void }
 
@@ -24,6 +34,7 @@ export default function CreateOrderModal({ onClose, onSuccess }: Props) {
   const [status, setStatus] = useState('COMPLETED')
   const [showProductSearch, setShowProductSearch] = useState(false)
   const [showCustomerSearch, setShowCustomerSearch] = useState(false)
+  const [showNewCustomer, setShowNewCustomer] = useState(false)
 
   const { data: products } = useQuery({
     queryKey: ['products-search', productSearch],
@@ -45,7 +56,14 @@ export default function CreateOrderModal({ onClose, onSuccess }: Props) {
     setCart(prev => {
       const exists = prev.find(i => i.productId === p.id)
       if (exists) return prev.map(i => i.productId === p.id ? { ...i, qty: i.qty + 1 } : i)
-      return [...prev, { productId: p.id, name: p.name, code: p.code, price: p.price, qty: 1, stock: p.stock }]
+      return [...prev, {
+        productId: p.id, name: p.name, code: p.code,
+        unitPrice: p.price, price: p.price, qty: 1, stock: p.stock,
+        unit: p.unit || 'cái',
+        packageUnit: p.packageUnit || null,
+        packageQty: p.packageQty || null,
+        selectedUnit: p.unit || 'cái'
+      }]
     })
     setProductSearch('')
     setShowProductSearch(false)
@@ -57,13 +75,25 @@ export default function CreateOrderModal({ onClose, onSuccess }: Props) {
   }
 
   const updatePrice = (productId: string, price: number) => {
-    setCart(p => p.map(i => i.productId === productId ? { ...i, price } : i))
+    setCart(p => p.map(i => i.productId === productId ? { ...i, price, unitPrice: i.selectedUnit === i.packageUnit && i.packageQty ? price / i.packageQty : price } : i))
+  }
+
+  const updateUnit = (productId: string, unit: string) => {
+    setCart(p => p.map(i => {
+      if (i.productId !== productId) return i
+      const newPrice = unit === i.packageUnit && i.packageQty ? i.unitPrice * i.packageQty : i.unitPrice
+      return { ...i, selectedUnit: unit, price: newPrice }
+    }))
   }
 
   const { mutate: createOrder, isPending } = useMutation({
     mutationFn: () => api.post('/orders', {
       customerId: customerId || undefined,
-      items: cart.map(i => ({ productId: i.productId, price: i.price, qty: i.qty })),
+      items: cart.map(i => ({
+        productId: i.productId,
+        price: i.unitPrice,
+        qty: i.selectedUnit === i.packageUnit && i.packageQty ? i.qty * i.packageQty : i.qty
+      })),
       paymentMethod, discount, amountPaid, note, channel, status
     }),
     onSuccess: (res) => {
@@ -76,6 +106,7 @@ export default function CreateOrderModal({ onClose, onSuccess }: Props) {
   })
 
   return (
+    <>
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
         {/* Header */}
@@ -89,7 +120,13 @@ export default function CreateOrderModal({ onClose, onSuccess }: Props) {
           <div className="flex-1 overflow-y-auto p-6 space-y-4 border-r">
             {/* Customer */}
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">Khách hàng</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-sm font-medium text-gray-700">Khách hàng</label>
+                <button type="button" onClick={() => setShowNewCustomer(true)}
+                  className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium">
+                  <UserPlus size={13} /> Tạo mới
+                </button>
+              </div>
               <div className="relative">
                 <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
@@ -153,7 +190,7 @@ export default function CreateOrderModal({ onClose, onSuccess }: Props) {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-3 py-2 text-left font-medium text-gray-600">Sản phẩm</th>
-                      <th className="px-3 py-2 text-center font-medium text-gray-600">SL</th>
+                      <th className="px-3 py-2 text-center font-medium text-gray-600">SL / Đơn vị</th>
                       <th className="px-3 py-2 text-right font-medium text-gray-600">Đơn giá</th>
                       <th className="px-3 py-2 text-right font-medium text-gray-600">Thành tiền</th>
                       <th className="w-8"></th>
@@ -167,19 +204,33 @@ export default function CreateOrderModal({ onClose, onSuccess }: Props) {
                           <p className="text-gray-400 text-xs">{item.code}</p>
                         </td>
                         <td className="px-3 py-2">
-                          <div className="flex items-center justify-center gap-1">
-                            <button onClick={() => updateQty(item.productId, item.qty - 1)}
-                              className="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 flex items-center justify-center">
-                              <Minus size={10} />
-                            </button>
-                            <input type="number" value={item.qty} min={1} max={item.stock}
-                              onChange={e => updateQty(item.productId, +e.target.value)}
-                              className="w-12 text-center border rounded text-sm py-0.5" />
-                            <button onClick={() => updateQty(item.productId, item.qty + 1)}
-                              disabled={item.qty >= item.stock}
-                              className="w-6 h-6 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center disabled:opacity-40">
-                              <Plus size={10} />
-                            </button>
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => updateQty(item.productId, item.qty - 1)}
+                                className="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 flex items-center justify-center">
+                                <Minus size={10} />
+                              </button>
+                              <input type="number" value={item.qty} min={1}
+                                max={item.selectedUnit === item.packageUnit && item.packageQty ? Math.floor(item.stock / item.packageQty) : item.stock}
+                                onChange={e => updateQty(item.productId, +e.target.value)}
+                                className="w-12 text-center border rounded text-sm py-0.5" />
+                              <button onClick={() => updateQty(item.productId, item.qty + 1)}
+                                disabled={item.selectedUnit === item.packageUnit && item.packageQty ? item.qty >= Math.floor(item.stock / item.packageQty) : item.qty >= item.stock}
+                                className="w-6 h-6 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center disabled:opacity-40">
+                                <Plus size={10} />
+                              </button>
+                            </div>
+                            <select
+                              value={item.selectedUnit}
+                              onChange={e => updateUnit(item.productId, e.target.value)}
+                              className="text-xs border rounded px-1 py-0.5 text-gray-600 bg-gray-50 w-full max-w-[90px]">
+                              <option value={item.unit}>{item.unit.charAt(0).toUpperCase() + item.unit.slice(1)}</option>
+                              {item.packageUnit && item.packageQty && (
+                                <option value={item.packageUnit}>
+                                  {item.packageUnit.charAt(0).toUpperCase() + item.packageUnit.slice(1)} ({item.packageQty} {item.unit})
+                                </option>
+                              )}
+                            </select>
                           </div>
                         </td>
                         <td className="px-3 py-2">
@@ -188,7 +239,10 @@ export default function CreateOrderModal({ onClose, onSuccess }: Props) {
                             className="w-28 border rounded text-sm py-0.5 px-2 text-right" />
                         </td>
                         <td className="px-3 py-2 text-right font-medium text-blue-600">
-                          {fmt(item.price * item.qty)}
+                          <p>{fmt(item.price * item.qty)}</p>
+                          {item.selectedUnit === item.packageUnit && item.packageQty && (
+                            <p className="text-xs text-gray-400">{item.qty * item.packageQty} {item.unit}</p>
+                          )}
                         </td>
                         <td className="px-3 py-2">
                           <button onClick={() => setCart(c => c.filter(i => i.productId !== item.productId))}
@@ -290,5 +344,18 @@ export default function CreateOrderModal({ onClose, onSuccess }: Props) {
         </div>
       </div>
     </div>
+
+    {showNewCustomer && (
+      <NewCustomerModal
+        defaultName={customerSearch}
+        onClose={() => setShowNewCustomer(false)}
+        onCreated={(customer) => {
+          setCustomerId(customer.id)
+          setCustomerSearch(customer.name)
+          setShowNewCustomer(false)
+        }}
+      />
+    )}
+    </>
   )
 }

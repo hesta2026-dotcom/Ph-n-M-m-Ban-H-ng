@@ -12,7 +12,7 @@ const io = new Server(server, {
 
 app.use(cors({ origin: process.env.CLIENT_URL }));
 app.use(express.json());
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(require('path').join(__dirname, '../uploads')));
 
 // Routes
 app.use('/api/auth',      require('./routes/auth'));

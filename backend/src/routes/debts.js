@@ -26,6 +26,9 @@ router.post('/:id/pay', auth, async (req, res) => {
     if (debt.type === 'CUSTOMER' && debt.customerId) {
       await prisma.customer.update({ where: { id: debt.customerId }, data: { debt: { decrement: amount } } });
     }
+    if (debt.type === 'SUPPLIER' && debt.supplierId) {
+      await prisma.supplier.update({ where: { id: debt.supplierId }, data: { debt: { decrement: amount } } });
+    }
     res.json(updated);
   } catch (e) { res.status(500).json({ message: e.message }); }
 });

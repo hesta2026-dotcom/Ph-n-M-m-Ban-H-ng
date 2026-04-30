@@ -6,7 +6,7 @@ import { Search, Plus, Minus, Trash2, ShoppingCart, User, Printer } from 'lucide
 
 const fmt = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
 
-interface CartItem { productId: string; name: string; price: number; qty: number; stock: number }
+interface CartItem { productId: string; name: string; brand: string; specification: string; image: string; price: number; qty: number; stock: number }
 
 export default function POS() {
   const [search, setSearch] = useState('')
@@ -35,10 +35,11 @@ export default function POS() {
   const change = amountPaid - total
 
   const addToCart = (p: any) => {
+    const imgs: string[] = p.images ? JSON.parse(p.images) : []
     setCart(prev => {
       const exists = prev.find(i => i.productId === p.id)
       if (exists) return prev.map(i => i.productId === p.id ? { ...i, qty: i.qty + 1 } : i)
-      return [...prev, { productId: p.id, name: p.name, price: p.price, qty: 1, stock: p.stock }]
+      return [...prev, { productId: p.id, name: p.name, brand: p.brand || '', specification: p.specification || '', image: p.image || imgs[0] || '', price: p.price, qty: 1, stock: p.stock }]
     })
   }
 
@@ -71,17 +72,26 @@ export default function POS() {
           <input className="input pl-10" placeholder="Tìm sản phẩm theo tên, mã, barcode..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <div className="flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 content-start">
-          {products?.map((p: any) => (
-            <button key={p.id} onClick={() => addToCart(p)} disabled={p.stock === 0}
-              className="bg-white border rounded-xl p-3 text-left hover:border-blue-400 hover:shadow-md transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-              <div className="aspect-square bg-gray-100 rounded-lg mb-2 flex items-center justify-center">
-                {p.image ? <img src={p.image} className="w-full h-full object-cover rounded-lg" /> : <span className="text-2xl">📦</span>}
-              </div>
-              <p className="text-sm font-medium line-clamp-2">{p.name}</p>
-              <p className="text-blue-600 font-semibold text-sm mt-1">{fmt(p.price)}</p>
-              <p className="text-xs text-gray-400">Còn: {p.stock}</p>
-            </button>
-          ))}
+          {products?.map((p: any) => {
+            const imgs: string[] = p.images ? JSON.parse(p.images) : []
+            const thumb = p.image || imgs[0]
+            return (
+              <button key={p.id} onClick={() => addToCart(p)} disabled={p.stock === 0}
+                className="bg-white border rounded-xl p-3 text-left hover:border-blue-400 hover:shadow-md transition-all disabled:opacity-40 disabled:cursor-not-allowed relative">
+                {p.stock === 0 && <span className="absolute top-2 right-2 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">Hết</span>}
+                <div className="aspect-square bg-gray-100 rounded-lg mb-2 flex items-center justify-center overflow-hidden">
+                  {thumb
+                    ? <img src={thumb} alt={p.name} className="w-full h-full object-cover" />
+                    : <span className="text-3xl">📦</span>}
+                </div>
+                <p className="text-sm font-medium line-clamp-2 leading-tight">{p.name}</p>
+                {p.brand && <p className="text-xs text-purple-500 mt-0.5 truncate">{p.brand}</p>}
+                {p.specification && <p className="text-xs text-gray-400 truncate">{p.specification}</p>}
+                <p className="text-blue-600 font-semibold text-sm mt-1">{fmt(p.price)}</p>
+                <p className="text-xs text-gray-400">Còn: {p.stock} {p.unit}</p>
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -110,8 +120,14 @@ export default function POS() {
           {cart.length === 0 && <p className="text-center text-gray-400 py-8">Chưa có sản phẩm nào</p>}
           {cart.map(item => (
             <div key={item.productId} className="flex items-center gap-2 bg-gray-50 rounded-lg p-2">
+              <div className="w-9 h-9 rounded-lg bg-gray-200 flex-shrink-0 overflow-hidden">
+                {item.image
+                  ? <img src={item.image} alt="" className="w-full h-full object-cover" />
+                  : <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">📦</div>}
+              </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{item.name}</p>
+                {item.brand && <p className="text-xs text-purple-500 truncate">{item.brand}</p>}
                 <p className="text-blue-600 text-sm">{fmt(item.price)}</p>
               </div>
               <div className="flex items-center gap-1">

@@ -62,12 +62,18 @@ model Product {
   name        String
   barcode     String?  @unique
   description String?
-  image       String?
-  price       Float
-  costPrice   Float    @default(0)
+  image         String?
+  images        String?
+  brand         String?
+  manufacturer  String?
+  specification String?
+  price         Float
+  costPrice     Float    @default(0)
   stock       Int      @default(0)
   minStock    Int      @default(5)
   unit        String   @default("cái")
+  packageUnit String?
+  packageQty  Int?
   isActive    Boolean  @default(true)
   categoryId  String?
   supplierId  String?

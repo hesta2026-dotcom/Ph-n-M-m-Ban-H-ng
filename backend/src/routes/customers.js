@@ -17,6 +17,16 @@ router.get('/', auth, async (req, res) => {
 
 router.post('/', auth, async (req, res) => {
   try {
+    const { phone } = req.body;
+    if (phone) {
+      const existing = await prisma.customer.findUnique({ where: { phone } });
+      if (existing) {
+        return res.status(409).json({
+          message: 'Số điện thoại đã được đăng ký cho khách hàng khác',
+          existing
+        });
+      }
+    }
     const customer = await prisma.customer.create({ data: req.body });
     res.status(201).json(customer);
   } catch (e) { res.status(500).json({ message: e.message }); }

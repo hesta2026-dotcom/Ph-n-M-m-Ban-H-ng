@@ -5,10 +5,11 @@ const prisma = new PrismaClient();
 
 router.get('/', auth, async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, supplierId } = req.query;
+    const where = supplierId ? { supplierId } : {};
     const [purchases, total] = await Promise.all([
-      prisma.purchaseOrder.findMany({ include: { supplier: true, items: { include: { product: true } } }, skip: (page - 1) * limit, take: +limit, orderBy: { createdAt: 'desc' } }),
-      prisma.purchaseOrder.count()
+      prisma.purchaseOrder.findMany({ where, include: { supplier: true, items: { include: { product: true } } }, skip: (page - 1) * limit, take: +limit, orderBy: { createdAt: 'desc' } }),
+      prisma.purchaseOrder.count({ where })
     ]);
     res.json({ data: purchases, total });
   } catch (e) { res.status(500).json({ message: e.message }); }
@@ -32,6 +33,12 @@ router.post('/', auth, async (req, res) => {
       }
       if (debt > 0) {
         await tx.supplier.update({ where: { id: supplierId }, data: { debt: { increment: debt } } });
+        await tx.debt.create({
+          data: {
+            type: 'SUPPLIER', supplierId, amount: debt, paid: 0, remaining: debt,
+            status: 'UNPAID', note: `Phiếu nhập ${code}`
+          }
+        });
       }
       return p;
     });
