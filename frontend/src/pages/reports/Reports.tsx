@@ -3,13 +3,23 @@ import { useQuery } from '@tanstack/react-query'
 import api from '../../services/api'
 import { BarChart2, TrendingUp, FileSpreadsheet, FileText } from 'lucide-react'
 import { exportExcel, exportPDF, PRESETS, fmtPeriod } from '../../utils/export'
+import ColumnPicker, { ColDef } from '../../components/ColumnPicker'
 
 const fmt = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
+
+const COLS_REVENUE: ColDef[] = [
+  { key: 'orderCode', label: 'Mã đơn' },
+  { key: 'customer', label: 'Khách hàng' },
+  { key: 'channel', label: 'Kênh' },
+  { key: 'total', label: 'Tổng tiền' },
+  { key: 'createdAt', label: 'Ngày' },
+]
 
 export default function Reports() {
   const [from, setFrom] = useState(new Date(new Date().setDate(1)).toISOString().slice(0, 10))
   const [to, setTo] = useState(new Date().toISOString().slice(0, 10))
   const [activePreset, setActivePreset] = useState('Tháng này')
+  const [visible, setVisible] = useState<Set<string>>(() => new Set(COLS_REVENUE.map(c => c.key)))
 
   const applyPreset = (p: typeof PRESETS[number]) => {
     const [f, t] = p.getDates(); setFrom(f); setTo(t); setActivePreset(p.label)
@@ -33,15 +43,30 @@ export default function Reports() {
   const byChannel = revenue?.reduce((acc: any, o: any) => { acc[o.channel] = (acc[o.channel] || 0) + o.total; return acc }, {}) || {}
   const channelLabel: any = { store: 'Cửa hàng', shopee: 'Shopee', facebook: 'Facebook', web: 'Website' }
 
+  const visCols = COLS_REVENUE.filter(c => visible.has(c.key))
+
+  const getVal = (o: any, key: string) => {
+    switch (key) {
+      case 'orderCode': return o.orderCode
+      case 'customer': return o.customer?.name || 'Khách lẻ'
+      case 'channel': return channelLabel[o.channel] || o.channel
+      case 'total': return o.total
+      case 'createdAt': return new Date(o.createdAt).toLocaleDateString('vi-VN')
+      default: return ''
+    }
+  }
+
   const handleExcelRevenue = () => {
-    const headers = ['Mã đơn', 'Khách hàng', 'Kênh', 'Tổng tiền', 'Ngày']
-    const rows = (revenue || []).map((o: any) => [o.orderCode, o.customer?.name || 'Khách lẻ', channelLabel[o.channel] || o.channel, o.total, new Date(o.createdAt).toLocaleDateString('vi-VN')])
+    const headers = visCols.map(c => c.label)
+    const rows = (revenue || []).map((o: any) => visCols.map(c => getVal(o, c.key)))
     exportExcel(`Doanh-thu_${from}_${to}`, 'Doanh thu', headers, rows)
   }
 
   const handlePDFRevenue = () => {
-    const headers = ['Mã đơn', 'Khách hàng', 'Kênh', 'Tổng tiền', 'Ngày']
-    const rows = (revenue || []).map((o: any) => [o.orderCode, o.customer?.name || 'Khách lẻ', channelLabel[o.channel] || o.channel, fmt(o.total), new Date(o.createdAt).toLocaleDateString('vi-VN')])
+    const headers = visCols.map(c => c.label)
+    const rows = (revenue || []).map((o: any) => visCols.map(c =>
+      c.key === 'total' ? fmt(o.total) : getVal(o, c.key)
+    ))
     exportPDF(`Doanh-thu_${from}_${to}`, 'Báo cáo doanh thu', fmtPeriod(from, to), headers, rows)
   }
 
@@ -57,7 +82,6 @@ export default function Reports() {
         <h1 className="text-2xl font-bold">Báo cáo</h1>
       </div>
 
-      {/* Bộ lọc thời gian */}
       <div className="card py-4">
         <div className="flex items-center flex-wrap gap-3">
           <div className="flex gap-1.5 flex-wrap">
@@ -77,7 +101,6 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* Tổng quan */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Doanh thu', value: fmt(totalRevenue), icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50' },
@@ -93,7 +116,6 @@ export default function Reports() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Doanh thu theo kênh */}
         <div className="card">
           <h2 className="font-semibold mb-4 flex items-center gap-2"><BarChart2 size={18} /> Doanh thu theo kênh</h2>
           <div className="space-y-3">
@@ -110,7 +132,6 @@ export default function Reports() {
           </div>
         </div>
 
-        {/* Top sản phẩm */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold flex items-center gap-2"><BarChart2 size={18} /> Top sản phẩm bán chạy</h2>
@@ -133,12 +154,12 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* Danh sách đơn hàng + export */}
       {(revenue?.length > 0) && (
         <div className="card p-0 overflow-hidden">
-          <div className="px-5 py-4 border-b flex items-center justify-between">
+          <div className="px-5 py-4 border-b flex items-center justify-between flex-wrap gap-2">
             <h2 className="font-semibold text-gray-800">Danh sách đơn hàng ({revenue.length})</h2>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
+              <ColumnPicker cols={COLS_REVENUE} visible={visible} onChange={setVisible} />
               <button onClick={handleExcelRevenue} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-medium hover:bg-green-700">
                 <FileSpreadsheet size={14} /> Excel
               </button>
@@ -150,18 +171,20 @@ export default function Reports() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
-                <tr>{['Mã đơn', 'Khách hàng', 'Kênh', 'Tổng tiền', 'Ngày'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left font-medium text-gray-600">{h}</th>
-                ))}</tr>
+                <tr>
+                  {visCols.map(c => (
+                    <th key={c.key} className="px-4 py-3 text-left font-medium text-gray-600">{c.label}</th>
+                  ))}
+                </tr>
               </thead>
               <tbody className="divide-y">
                 {revenue.map((o: any) => (
                   <tr key={o.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-2.5 font-mono text-xs font-semibold text-blue-700">{o.orderCode}</td>
-                    <td className="px-4 py-2.5">{o.customer?.name || 'Khách lẻ'}</td>
-                    <td className="px-4 py-2.5 text-gray-500">{channelLabel[o.channel] || o.channel}</td>
-                    <td className="px-4 py-2.5 font-semibold text-green-600">{fmt(o.total)}</td>
-                    <td className="px-4 py-2.5 text-gray-400 text-xs">{new Date(o.createdAt).toLocaleDateString('vi-VN')}</td>
+                    {visible.has('orderCode') && <td className="px-4 py-2.5 font-mono text-xs font-semibold text-blue-700">{o.orderCode}</td>}
+                    {visible.has('customer') && <td className="px-4 py-2.5">{o.customer?.name || 'Khách lẻ'}</td>}
+                    {visible.has('channel') && <td className="px-4 py-2.5 text-gray-500">{channelLabel[o.channel] || o.channel}</td>}
+                    {visible.has('total') && <td className="px-4 py-2.5 font-semibold text-green-600">{fmt(o.total)}</td>}
+                    {visible.has('createdAt') && <td className="px-4 py-2.5 text-gray-400 text-xs">{new Date(o.createdAt).toLocaleDateString('vi-VN')}</td>}
                   </tr>
                 ))}
               </tbody>

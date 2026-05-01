@@ -6,8 +6,47 @@ import { AlertTriangle, Plus, Package, Tag, Building2, X, PackagePlus, FileSprea
 import { exportExcel, exportPDF, PRESETS, fmtPeriod } from '../../utils/export'
 import NewProductModal from '../products/NewProductModal'
 import NewSupplierModal from '../suppliers/NewSupplierModal'
+import ColumnPicker, { ColDef } from '../../components/ColumnPicker'
 
 const fmt = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
+
+const COLS_LOW: ColDef[] = [
+  { key: 'product', label: 'Sản phẩm' },
+  { key: 'brandMfr', label: 'Thương hiệu / CTSX' },
+  { key: 'specification', label: 'Quy cách' },
+  { key: 'unit', label: 'Đơn vị' },
+  { key: 'stock', label: 'Tồn kho' },
+  { key: 'minStock', label: 'Tối thiểu' },
+  { key: 'costPrice', label: 'Giá vốn' },
+]
+const COLS_ALL: ColDef[] = [
+  { key: 'product', label: 'Sản phẩm' },
+  { key: 'brandMfr', label: 'Thương hiệu / CTSX' },
+  { key: 'specification', label: 'Quy cách' },
+  { key: 'unit', label: 'Đơn vị' },
+  { key: 'stock', label: 'Tồn kho' },
+  { key: 'minStock', label: 'Tối thiểu' },
+  { key: 'price', label: 'Giá bán' },
+  { key: 'costPrice', label: 'Giá vốn' },
+]
+const COLS_LOGS: ColDef[] = [
+  { key: 'product', label: 'Sản phẩm' },
+  { key: 'type', label: 'Loại' },
+  { key: 'qty', label: 'Số lượng' },
+  { key: 'before', label: 'Tồn trước' },
+  { key: 'after', label: 'Tồn sau' },
+  { key: 'note', label: 'Ghi chú' },
+  { key: 'createdAt', label: 'Thời gian' },
+]
+const COLS_PURCHASE: ColDef[] = [
+  { key: 'code', label: 'Mã phiếu' },
+  { key: 'supplier', label: 'Nhà cung cấp' },
+  { key: 'total', label: 'Tổng tiền' },
+  { key: 'paid', label: 'Đã trả' },
+  { key: 'debt', label: 'Còn nợ' },
+  { key: 'status', label: 'Trạng thái' },
+  { key: 'createdAt', label: 'Ngày nhập' },
+]
 
 function ProductThumb({ product, size = 'sm' }: { product: any; size?: 'sm' | 'md' }) {
   const imgs: string[] = product?.images ? JSON.parse(product.images) : []
@@ -58,6 +97,10 @@ export default function Stock() {
   const [showNewSupplier, setShowNewSupplier] = useState(false)
   const [searchLow, setSearchLow] = useState('')
   const [searchAll, setSearchAll] = useState('')
+  const [visLow, setVisLow] = useState<Set<string>>(() => new Set(COLS_LOW.map(c => c.key)))
+  const [visAll, setVisAll] = useState<Set<string>>(() => new Set(COLS_ALL.map(c => c.key)))
+  const [visLogs, setVisLogs] = useState<Set<string>>(() => new Set(COLS_LOGS.map(c => c.key)))
+  const [visPurchase, setVisPurchase] = useState<Set<string>>(() => new Set(COLS_PURCHASE.map(c => c.key)))
   const qc = useQueryClient()
 
   const { data: lowStockData } = useQuery({
@@ -191,40 +234,47 @@ export default function Stock() {
       {/* ── Tab: Hàng sắp hết ── */}
       {tab === 'low' && (
         <>
-          <input className="input" placeholder="Tìm theo tên, mã, thương hiệu..."
-            value={searchLow} onChange={e => setSearchLow(e.target.value)} />
+          <div className="flex gap-2 items-center">
+            <input className="input flex-1" placeholder="Tìm theo tên, mã, thương hiệu..."
+              value={searchLow} onChange={e => setSearchLow(e.target.value)} />
+            <ColumnPicker cols={COLS_LOW} visible={visLow} onChange={setVisLow} />
+          </div>
           <div className="card p-0 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    {['Sản phẩm', 'Thương hiệu / Công ty SX', 'Quy cách', 'Đơn vị', 'Tồn kho', 'Tối thiểu', 'Giá vốn'].map(h => (
-                      <th key={h} className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">{h}</th>
+                    {COLS_LOW.filter(c => visLow.has(c.key)).map(c => (
+                      <th key={c.key} className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">{c.label}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {filteredLow.map((p: any) => (
                     <tr key={p.id} className={`hover:bg-gray-50 ${p.stock === 0 ? 'bg-red-50' : ''}`}>
-                      <td className="px-4 py-3"><ProductInfo product={p} /></td>
-                      <td className="px-4 py-3">
-                        {p.brand && <p className="font-medium text-sm flex items-center gap-1"><Tag size={12} className="text-purple-400" />{p.brand}</p>}
-                        {p.manufacturer && <p className="text-xs text-gray-400 flex items-center gap-1"><Building2 size={11} />{p.manufacturer}</p>}
-                        {!p.brand && !p.manufacturer && <span className="text-gray-300">—</span>}
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">{p.specification || '—'}</td>
-                      <td className="px-4 py-3 text-gray-500">{p.unit}</td>
-                      <td className="px-4 py-3">
-                        <span className={`badge ${p.stock === 0 ? 'badge-red' : 'badge-yellow'}`}>
-                          {p.stock === 0 ? 'Hết hàng' : `${p.stock} ${p.unit}`}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-500">{p.minStock}</td>
-                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{fmt(p.costPrice)}</td>
+                      {visLow.has('product') && <td className="px-4 py-3"><ProductInfo product={p} /></td>}
+                      {visLow.has('brandMfr') && (
+                        <td className="px-4 py-3">
+                          {p.brand && <p className="font-medium text-sm flex items-center gap-1"><Tag size={12} className="text-purple-400" />{p.brand}</p>}
+                          {p.manufacturer && <p className="text-xs text-gray-400 flex items-center gap-1"><Building2 size={11} />{p.manufacturer}</p>}
+                          {!p.brand && !p.manufacturer && <span className="text-gray-300">—</span>}
+                        </td>
+                      )}
+                      {visLow.has('specification') && <td className="px-4 py-3 text-gray-500 text-xs">{p.specification || '—'}</td>}
+                      {visLow.has('unit') && <td className="px-4 py-3 text-gray-500">{p.unit}</td>}
+                      {visLow.has('stock') && (
+                        <td className="px-4 py-3">
+                          <span className={`badge ${p.stock === 0 ? 'badge-red' : 'badge-yellow'}`}>
+                            {p.stock === 0 ? 'Hết hàng' : `${p.stock} ${p.unit}`}
+                          </span>
+                        </td>
+                      )}
+                      {visLow.has('minStock') && <td className="px-4 py-3 text-gray-500">{p.minStock}</td>}
+                      {visLow.has('costPrice') && <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{fmt(p.costPrice)}</td>}
                     </tr>
                   ))}
                   {!filteredLow.length && (
-                    <tr><td colSpan={7} className="text-center py-10 text-gray-400">
+                    <tr><td colSpan={COLS_LOW.filter(c => visLow.has(c.key)).length} className="text-center py-10 text-gray-400">
                       {searchLow ? 'Không tìm thấy sản phẩm' : 'Tất cả sản phẩm đều đủ hàng'}
                     </td></tr>
                   )}
@@ -241,16 +291,43 @@ export default function Stock() {
           <div className="flex gap-2 items-center">
             <input className="input flex-1" placeholder="Tìm theo tên, mã, thương hiệu..."
               value={searchAll} onChange={e => setSearchAll(e.target.value)} />
+            <ColumnPicker cols={COLS_ALL} visible={visAll} onChange={setVisAll} />
             <button onClick={() => {
-              const headers = ['Tên sản phẩm', 'Mã SP', 'Thương hiệu', 'Đơn vị', 'Tồn kho', 'Tối thiểu', 'Giá bán', 'Giá vốn']
-              const rows = (allProducts || []).map((p: any) => [p.name, p.code, p.brand || '', p.unit, p.stock, p.minStock, p.price, p.costPrice])
+              const vc = COLS_ALL.filter(c => visAll.has(c.key))
+              const headers = vc.map(c => c.label)
+              const rows = (allProducts || []).map((p: any) => vc.map(c => {
+                switch (c.key) {
+                  case 'product': return p.name
+                  case 'brandMfr': return [p.brand, p.manufacturer].filter(Boolean).join(' / ')
+                  case 'specification': return p.specification || ''
+                  case 'unit': return p.unit
+                  case 'stock': return p.stock
+                  case 'minStock': return p.minStock
+                  case 'price': return p.price
+                  case 'costPrice': return p.costPrice
+                  default: return ''
+                }
+              }))
               exportExcel('Ton-kho', 'Ton kho', headers, rows)
             }} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 whitespace-nowrap">
               <FileSpreadsheet size={14} /> Excel
             </button>
             <button onClick={() => {
-              const headers = ['Tên sản phẩm', 'Mã SP', 'Đơn vị', 'Tồn kho', 'Giá bán', 'Giá vốn']
-              const rows = (allProducts || []).map((p: any) => [p.name, p.code, p.unit, p.stock, fmt(p.price), fmt(p.costPrice)])
+              const vc = COLS_ALL.filter(c => visAll.has(c.key))
+              const headers = vc.map(c => c.label)
+              const rows = (allProducts || []).map((p: any) => vc.map(c => {
+                switch (c.key) {
+                  case 'product': return p.name
+                  case 'brandMfr': return [p.brand, p.manufacturer].filter(Boolean).join(' / ')
+                  case 'specification': return p.specification || ''
+                  case 'unit': return p.unit
+                  case 'stock': return p.stock
+                  case 'minStock': return p.minStock
+                  case 'price': return fmt(p.price)
+                  case 'costPrice': return fmt(p.costPrice)
+                  default: return ''
+                }
+              }))
               exportPDF('Ton-kho', 'Danh sach ton kho', `Tong: ${allProducts?.length || 0} san pham`, headers, rows)
             }} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 whitespace-nowrap">
               <FileText size={14} /> PDF
@@ -261,33 +338,37 @@ export default function Stock() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    {['Sản phẩm', 'Thương hiệu / Công ty SX', 'Quy cách', 'Đơn vị', 'Tồn kho', 'Tối thiểu', 'Giá bán', 'Giá vốn'].map(h => (
-                      <th key={h} className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">{h}</th>
+                    {COLS_ALL.filter(c => visAll.has(c.key)).map(c => (
+                      <th key={c.key} className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">{c.label}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {allProducts?.map((p: any) => (
                     <tr key={p.id} className={`hover:bg-gray-50 ${p.stock <= p.minStock ? 'bg-yellow-50/50' : ''}`}>
-                      <td className="px-4 py-3"><ProductInfo product={p} /></td>
-                      <td className="px-4 py-3">
-                        {p.brand && <p className="font-medium text-sm flex items-center gap-1"><Tag size={12} className="text-purple-400" />{p.brand}</p>}
-                        {p.manufacturer && <p className="text-xs text-gray-400 flex items-center gap-1"><Building2 size={11} />{p.manufacturer}</p>}
-                        {!p.brand && !p.manufacturer && <span className="text-gray-300">—</span>}
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">{p.specification || '—'}</td>
-                      <td className="px-4 py-3 text-gray-500">{p.unit}</td>
-                      <td className="px-4 py-3">
-                        <span className={`badge ${p.stock === 0 ? 'badge-red' : p.stock <= p.minStock ? 'badge-yellow' : 'badge-green'}`}>
-                          {p.stock}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-400">{p.minStock}</td>
-                      <td className="px-4 py-3 text-blue-600 font-medium whitespace-nowrap">{fmt(p.price)}</td>
-                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{fmt(p.costPrice)}</td>
+                      {visAll.has('product') && <td className="px-4 py-3"><ProductInfo product={p} /></td>}
+                      {visAll.has('brandMfr') && (
+                        <td className="px-4 py-3">
+                          {p.brand && <p className="font-medium text-sm flex items-center gap-1"><Tag size={12} className="text-purple-400" />{p.brand}</p>}
+                          {p.manufacturer && <p className="text-xs text-gray-400 flex items-center gap-1"><Building2 size={11} />{p.manufacturer}</p>}
+                          {!p.brand && !p.manufacturer && <span className="text-gray-300">—</span>}
+                        </td>
+                      )}
+                      {visAll.has('specification') && <td className="px-4 py-3 text-gray-500 text-xs">{p.specification || '—'}</td>}
+                      {visAll.has('unit') && <td className="px-4 py-3 text-gray-500">{p.unit}</td>}
+                      {visAll.has('stock') && (
+                        <td className="px-4 py-3">
+                          <span className={`badge ${p.stock === 0 ? 'badge-red' : p.stock <= p.minStock ? 'badge-yellow' : 'badge-green'}`}>
+                            {p.stock}
+                          </span>
+                        </td>
+                      )}
+                      {visAll.has('minStock') && <td className="px-4 py-3 text-gray-400">{p.minStock}</td>}
+                      {visAll.has('price') && <td className="px-4 py-3 text-blue-600 font-medium whitespace-nowrap">{fmt(p.price)}</td>}
+                      {visAll.has('costPrice') && <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{fmt(p.costPrice)}</td>}
                     </tr>
                   ))}
-                  {!allProducts?.length && <tr><td colSpan={8} className="text-center py-10 text-gray-400">Không có sản phẩm</td></tr>}
+                  {!allProducts?.length && <tr><td colSpan={COLS_ALL.filter(c => visAll.has(c.key)).length} className="text-center py-10 text-gray-400">Không có sản phẩm</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -298,21 +379,44 @@ export default function Stock() {
       {/* ── Tab: Lịch sử kho ── */}
       {tab === 'logs' && (
         <div className="card p-0 overflow-hidden">
-          <div className="px-5 py-3 border-b flex items-center justify-between">
+          <div className="px-5 py-3 border-b flex items-center justify-between flex-wrap gap-2">
             <span className="text-sm font-medium text-gray-600">Lịch sử xuất nhập kho</span>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
+              <ColumnPicker cols={COLS_LOGS} visible={visLogs} onChange={setVisLogs} />
               <button onClick={() => {
-                const headers = ['Sản phẩm', 'Mã SP', 'Loại', 'Số lượng', 'Tồn trước', 'Tồn sau', 'Ghi chú', 'Thời gian']
-                const logTypeLabel: any = { IMPORT: 'Nhập kho', EXPORT: 'Xuất kho', ADJUST: 'Điều chỉnh', RETURN: 'Hoàn hàng' }
-                const rows = (logs || []).map((l: any) => [l.product?.name || '', l.product?.code || '', logTypeLabel[l.type] || l.type, l.qty, l.before, l.after, l.note || '', new Date(l.createdAt).toLocaleString('vi-VN')])
+                const vc = COLS_LOGS.filter(c => visLogs.has(c.key))
+                const headers = vc.map(c => c.label)
+                const rows = (logs || []).map((l: any) => vc.map(c => {
+                  switch (c.key) {
+                    case 'product': return l.product?.name || ''
+                    case 'type': return logTypeLabel[l.type] || l.type
+                    case 'qty': return l.qty
+                    case 'before': return l.before
+                    case 'after': return l.after
+                    case 'note': return l.note || ''
+                    case 'createdAt': return new Date(l.createdAt).toLocaleString('vi-VN')
+                    default: return ''
+                  }
+                }))
                 exportExcel(`Lich-su-kho_${from}_${to}`, 'Lich su kho', headers, rows)
               }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-medium hover:bg-green-700">
                 <FileSpreadsheet size={13} /> Excel
               </button>
               <button onClick={() => {
-                const headers = ['Sản phẩm', 'Loại', 'SL', 'Tồn trước', 'Tồn sau', 'Ghi chú', 'Thời gian']
-                const logTypeLabel: any = { IMPORT: 'Nhập kho', EXPORT: 'Xuất kho', ADJUST: 'Điều chỉnh', RETURN: 'Hoàn hàng' }
-                const rows = (logs || []).map((l: any) => [l.product?.name || '', logTypeLabel[l.type] || l.type, l.qty, l.before, l.after, l.note || '', new Date(l.createdAt).toLocaleDateString('vi-VN')])
+                const vc = COLS_LOGS.filter(c => visLogs.has(c.key))
+                const headers = vc.map(c => c.label)
+                const rows = (logs || []).map((l: any) => vc.map(c => {
+                  switch (c.key) {
+                    case 'product': return l.product?.name || ''
+                    case 'type': return logTypeLabel[l.type] || l.type
+                    case 'qty': return String(l.qty)
+                    case 'before': return String(l.before)
+                    case 'after': return String(l.after)
+                    case 'note': return l.note || ''
+                    case 'createdAt': return new Date(l.createdAt).toLocaleDateString('vi-VN')
+                    default: return ''
+                  }
+                }))
                 exportPDF(`Lich-su-kho_${from}_${to}`, 'Lich su xuat nhap kho', fmtPeriod(from, to), headers, rows)
               }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-medium hover:bg-red-700">
                 <FileText size={13} /> PDF
@@ -323,37 +427,37 @@ export default function Stock() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  {['Sản phẩm', 'Loại', 'Số lượng', 'Tồn trước', 'Tồn sau', 'Ghi chú', 'Thời gian'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">{h}</th>
+                  {COLS_LOGS.filter(c => visLogs.has(c.key)).map(c => (
+                    <th key={c.key} className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">{c.label}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {logs?.map((l: any) => (
                   <tr key={l.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <ProductThumb product={l.product} />
-                        <div>
-                          <p className="font-medium">{l.product?.name}</p>
-                          {l.product?.brand && (
-                            <p className="text-xs text-purple-500 flex items-center gap-0.5"><Tag size={10} />{l.product.brand}</p>
-                          )}
-                          <p className="text-xs text-gray-400 font-mono">{l.product?.code}</p>
+                    {visLogs.has('product') && (
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <ProductThumb product={l.product} />
+                          <div>
+                            <p className="font-medium">{l.product?.name}</p>
+                            {l.product?.brand && (
+                              <p className="text-xs text-purple-500 flex items-center gap-0.5"><Tag size={10} />{l.product.brand}</p>
+                            )}
+                            <p className="text-xs text-gray-400 font-mono">{l.product?.code}</p>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`badge ${logTypeClass[l.type]}`}>{logTypeLabel[l.type]}</span>
-                    </td>
-                    <td className="px-4 py-3 font-semibold">{l.qty}</td>
-                    <td className="px-4 py-3 text-gray-500">{l.before}</td>
-                    <td className="px-4 py-3 text-gray-500">{l.after}</td>
-                    <td className="px-4 py-3 text-gray-400 max-w-xs truncate">{l.note || '—'}</td>
-                    <td className="px-4 py-3 text-gray-400 whitespace-nowrap text-xs">{new Date(l.createdAt).toLocaleString('vi-VN')}</td>
+                      </td>
+                    )}
+                    {visLogs.has('type') && <td className="px-4 py-3"><span className={`badge ${logTypeClass[l.type]}`}>{logTypeLabel[l.type]}</span></td>}
+                    {visLogs.has('qty') && <td className="px-4 py-3 font-semibold">{l.qty}</td>}
+                    {visLogs.has('before') && <td className="px-4 py-3 text-gray-500">{l.before}</td>}
+                    {visLogs.has('after') && <td className="px-4 py-3 text-gray-500">{l.after}</td>}
+                    {visLogs.has('note') && <td className="px-4 py-3 text-gray-400 max-w-xs truncate">{l.note || '—'}</td>}
+                    {visLogs.has('createdAt') && <td className="px-4 py-3 text-gray-400 whitespace-nowrap text-xs">{new Date(l.createdAt).toLocaleString('vi-VN')}</td>}
                   </tr>
                 ))}
-                {!logs?.length && <tr><td colSpan={7} className="text-center py-10 text-gray-400">Chưa có lịch sử</td></tr>}
+                {!logs?.length && <tr><td colSpan={COLS_LOGS.filter(c => visLogs.has(c.key)).length} className="text-center py-10 text-gray-400">Chưa có lịch sử</td></tr>}
               </tbody>
             </table>
           </div>
@@ -363,21 +467,46 @@ export default function Stock() {
       {/* ── Tab: Phiếu nhập ── */}
       {tab === 'purchase' && (
         <div className="card p-0 overflow-hidden">
-          <div className="px-5 py-3 border-b flex items-center justify-between">
+          <div className="px-5 py-3 border-b flex items-center justify-between flex-wrap gap-2">
             <span className="text-sm font-medium text-gray-600">Danh sách phiếu nhập</span>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
+              <ColumnPicker cols={COLS_PURCHASE} visible={visPurchase} onChange={setVisPurchase} />
               <button onClick={() => {
-                const headers = ['Mã phiếu', 'Nhà cung cấp', 'Tổng tiền', 'Đã trả', 'Còn nợ', 'Trạng thái', 'Ngày nhập']
                 const sLabel: any = { COMPLETED: 'Hoàn thành', CANCELLED: 'Đã hủy', PENDING: 'Chờ xử lý' }
-                const rows = (purchases?.data || []).map((p: any) => [p.code, p.supplier?.name || '', p.total, p.paid, p.debt, sLabel[p.status] || p.status, new Date(p.createdAt).toLocaleDateString('vi-VN')])
+                const vc = COLS_PURCHASE.filter(c => visPurchase.has(c.key))
+                const headers = vc.map(c => c.label)
+                const rows = (purchases?.data || []).map((p: any) => vc.map(c => {
+                  switch (c.key) {
+                    case 'code': return p.code
+                    case 'supplier': return p.supplier?.name || ''
+                    case 'total': return p.total
+                    case 'paid': return p.paid
+                    case 'debt': return p.debt
+                    case 'status': return sLabel[p.status] || p.status
+                    case 'createdAt': return new Date(p.createdAt).toLocaleDateString('vi-VN')
+                    default: return ''
+                  }
+                }))
                 exportExcel(`Phieu-nhap_${from}_${to}`, 'Phieu nhap', headers, rows)
               }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-medium hover:bg-green-700">
                 <FileSpreadsheet size={13} /> Excel
               </button>
               <button onClick={() => {
-                const headers = ['Mã phiếu', 'Nhà cung cấp', 'Tổng tiền', 'Đã trả', 'Còn nợ', 'Trạng thái']
                 const sLabel: any = { COMPLETED: 'Hoàn thành', CANCELLED: 'Đã hủy', PENDING: 'Chờ xử lý' }
-                const rows = (purchases?.data || []).map((p: any) => [p.code, p.supplier?.name || '', fmt(p.total), fmt(p.paid), fmt(p.debt), sLabel[p.status] || p.status])
+                const vc = COLS_PURCHASE.filter(c => visPurchase.has(c.key))
+                const headers = vc.map(c => c.label)
+                const rows = (purchases?.data || []).map((p: any) => vc.map(c => {
+                  switch (c.key) {
+                    case 'code': return p.code
+                    case 'supplier': return p.supplier?.name || ''
+                    case 'total': return fmt(p.total)
+                    case 'paid': return fmt(p.paid)
+                    case 'debt': return fmt(p.debt)
+                    case 'status': return sLabel[p.status] || p.status
+                    case 'createdAt': return new Date(p.createdAt).toLocaleString('vi-VN')
+                    default: return ''
+                  }
+                }))
                 exportPDF(`Phieu-nhap_${from}_${to}`, 'Danh sach phieu nhap hang', fmtPeriod(from, to), headers, rows)
               }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-medium hover:bg-red-700">
                 <FileText size={13} /> PDF
@@ -388,33 +517,36 @@ export default function Stock() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  {['Mã phiếu', 'Nhà cung cấp', 'Tổng tiền', 'Đã trả', 'Còn nợ', 'Trạng thái', 'Ngày nhập'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">{h}</th>
+                  {COLS_PURCHASE.filter(c => visPurchase.has(c.key)).map(c => (
+                    <th key={c.key} className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">{c.label}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {purchases?.data?.map((p: any) => (
                   <tr key={p.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <button onClick={() => setViewPurchase(p)}
-                        className="font-mono text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline">
-                        {p.code}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3">{p.supplier?.name}</td>
-                    <td className="px-4 py-3 font-semibold whitespace-nowrap">{fmt(p.total)}</td>
-                    <td className="px-4 py-3 text-green-600 whitespace-nowrap">{fmt(p.paid)}</td>
-                    <td className="px-4 py-3 text-red-500 whitespace-nowrap">{fmt(p.debt)}</td>
-                    <td className="px-4 py-3">
-                      <span className={`badge ${p.status === 'COMPLETED' ? 'badge-green' : p.status === 'CANCELLED' ? 'badge-red' : 'badge-yellow'}`}>
-                        {p.status === 'COMPLETED' ? 'Hoàn thành' : p.status === 'CANCELLED' ? 'Đã hủy' : 'Chờ xử lý'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-400 whitespace-nowrap text-xs">{new Date(p.createdAt).toLocaleString('vi-VN')}</td>
+                    {visPurchase.has('code') && (
+                      <td className="px-4 py-3">
+                        <button onClick={() => setViewPurchase(p)} className="font-mono text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline">
+                          {p.code}
+                        </button>
+                      </td>
+                    )}
+                    {visPurchase.has('supplier') && <td className="px-4 py-3">{p.supplier?.name}</td>}
+                    {visPurchase.has('total') && <td className="px-4 py-3 font-semibold whitespace-nowrap">{fmt(p.total)}</td>}
+                    {visPurchase.has('paid') && <td className="px-4 py-3 text-green-600 whitespace-nowrap">{fmt(p.paid)}</td>}
+                    {visPurchase.has('debt') && <td className="px-4 py-3 text-red-500 whitespace-nowrap">{fmt(p.debt)}</td>}
+                    {visPurchase.has('status') && (
+                      <td className="px-4 py-3">
+                        <span className={`badge ${p.status === 'COMPLETED' ? 'badge-green' : p.status === 'CANCELLED' ? 'badge-red' : 'badge-yellow'}`}>
+                          {p.status === 'COMPLETED' ? 'Hoàn thành' : p.status === 'CANCELLED' ? 'Đã hủy' : 'Chờ xử lý'}
+                        </span>
+                      </td>
+                    )}
+                    {visPurchase.has('createdAt') && <td className="px-4 py-3 text-gray-400 whitespace-nowrap text-xs">{new Date(p.createdAt).toLocaleString('vi-VN')}</td>}
                   </tr>
                 ))}
-                {!purchases?.data?.length && <tr><td colSpan={7} className="text-center py-10 text-gray-400">Chưa có phiếu nhập</td></tr>}
+                {!purchases?.data?.length && <tr><td colSpan={COLS_PURCHASE.filter(c => visPurchase.has(c.key)).length} className="text-center py-10 text-gray-400">Chưa có phiếu nhập</td></tr>}
               </tbody>
             </table>
           </div>

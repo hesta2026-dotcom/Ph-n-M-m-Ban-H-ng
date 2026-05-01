@@ -5,6 +5,7 @@ import { Bar } from 'react-chartjs-2'
 import api from '../../services/api'
 import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, Activity, Percent, FileSpreadsheet, FileText } from 'lucide-react'
 import { exportExcel, exportPDF, PRESETS, fmtPeriod } from '../../utils/export'
+import ColumnPicker, { ColDef } from '../../components/ColumnPicker'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend)
 
@@ -29,11 +30,20 @@ function StatCard({ label, value, sub, icon: Icon, colorClass, bgClass, isProfit
   )
 }
 
+const COLS_DAILY: ColDef[] = [
+  { key: 'date', label: 'Ngày' },
+  { key: 'revenue', label: 'Doanh thu' },
+  { key: 'cogs', label: 'Giá vốn' },
+  { key: 'grossProfit', label: 'Lợi nhuận gộp' },
+  { key: 'grossMargin', label: 'Biên lợi nhuận' },
+]
+
 export default function ProfitLoss() {
   const now = new Date()
   const [from, setFrom] = useState(new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10))
   const [to, setTo] = useState(now.toISOString().slice(0, 10))
   const [activePreset, setActivePreset] = useState('Tháng này')
+  const [visible, setVisible] = useState<Set<string>>(() => new Set(COLS_DAILY.map(c => c.key)))
 
   const applyPreset = (preset: typeof PRESETS[number]) => {
     const [f, t] = preset.getDates(); setFrom(f); setTo(t); setActivePreset(preset.label)
@@ -64,48 +74,48 @@ export default function ProfitLoss() {
     scales: { y: { ticks: { callback: (v: any) => fmtShort(v) + 'đ' } } }
   }
 
-  const handleExcel = () => {
-    const summary = [
-      ['Doanh thu bán hàng', d.revenue],
-      ['Giá vốn hàng bán', d.cogs],
-      ['Lợi nhuận gộp', d.grossProfit],
-      ['Biên LN gộp (%)', d.grossMargin],
-      ['Thu nhập khác', d.otherIncome],
-      ['Chi phí hoạt động', d.expenses],
-      ['Lợi nhuận ròng', d.netProfit],
-      ['Biên LN ròng (%)', d.netMargin],
-    ]
-    const dailyRows = d.daily.map((row: any) => {
-      const margin = row.revenue ? (row.grossProfit / row.revenue * 100).toFixed(1) : 0
-      return [row.date, row.revenue, row.cogs, row.grossProfit, margin + '%']
-    })
-    const wb = [] as any
-    exportExcel(`Lai-lo_${from}_${to}`, 'Tóm tắt', ['Chỉ tiêu', 'Giá trị'], summary)
-  }
+  const visCols = COLS_DAILY.filter(c => visible.has(c.key))
 
   const handleExcelDaily = () => {
-    const headers = ['Ngày', 'Doanh thu', 'Giá vốn', 'Lợi nhuận gộp', 'Biên lợi nhuận (%)']
+    const headers = visCols.map(c => c.label)
     const rows = d.daily.map((row: any) => {
       const margin = row.revenue ? (row.grossProfit / row.revenue * 100).toFixed(1) : '0'
-      return [row.date, row.revenue, row.cogs, row.grossProfit, margin]
+      return visCols.map(c => {
+        switch (c.key) {
+          case 'date': return row.date
+          case 'revenue': return row.revenue
+          case 'cogs': return row.cogs
+          case 'grossProfit': return row.grossProfit
+          case 'grossMargin': return margin + '%'
+          default: return ''
+        }
+      })
     })
     exportExcel(`Lai-lo_${from}_${to}`, 'Chi tiết ngày', headers, rows)
   }
 
   const handlePDF = () => {
-    const headers = ['Ngày', 'Doanh thu', 'Giá vốn', 'Lợi nhuận gộp', 'Biên LN (%)']
+    const headers = visCols.map(c => c.label)
     const rows = d.daily.map((row: any) => {
       const margin = row.revenue ? (row.grossProfit / row.revenue * 100).toFixed(1) : '0'
-      return [row.date, fmt(row.revenue), fmt(row.cogs), fmt(row.grossProfit), margin + '%']
+      return visCols.map(c => {
+        switch (c.key) {
+          case 'date': return row.date
+          case 'revenue': return fmt(row.revenue)
+          case 'cogs': return fmt(row.cogs)
+          case 'grossProfit': return fmt(row.grossProfit)
+          case 'grossMargin': return margin + '%'
+          default: return ''
+        }
+      })
     })
-    // Add summary rows at top
     const summaryRows: any[] = [
-      ['Doanh thu', fmt(d.revenue), '', '', ''],
-      ['Giá vốn', fmt(d.cogs), '', '', ''],
-      ['LN gộp', fmt(d.grossProfit), '', '', d.grossMargin.toFixed(1) + '%'],
-      ['Chi phí', fmt(d.expenses), '', '', ''],
-      ['LN ròng', fmt(d.netProfit), '', '', d.netMargin.toFixed(1) + '%'],
-      ['---Chi tiết theo ngày---', '', '', '', ''],
+      ['Doanh thu', fmt(d.revenue), '', '', ''].slice(0, visCols.length),
+      ['Giá vốn', fmt(d.cogs), '', '', ''].slice(0, visCols.length),
+      ['LN gộp', fmt(d.grossProfit), '', '', d.grossMargin.toFixed(1) + '%'].slice(0, visCols.length),
+      ['Chi phí', fmt(d.expenses), '', '', ''].slice(0, visCols.length),
+      ['LN ròng', fmt(d.netProfit), '', '', d.netMargin.toFixed(1) + '%'].slice(0, visCols.length),
+      ['---Chi tiết theo ngày---', ...Array(visCols.length - 1).fill('')],
       ...rows
     ]
     exportPDF(`Lai-lo_${from}_${to}`, 'Báo cáo Lãi / Lỗ', fmtPeriod(from, to), headers, summaryRows)
@@ -118,7 +128,8 @@ export default function ProfitLoss() {
           <h1 className="text-2xl font-bold text-gray-900">Báo cáo Lãi / Lỗ</h1>
           <p className="text-sm text-gray-500 mt-0.5">Phân tích doanh thu, chi phí và lợi nhuận</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <ColumnPicker cols={COLS_DAILY} visible={visible} onChange={setVisible} />
           <button onClick={handleExcelDaily} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700">
             <FileSpreadsheet size={15} /> Excel
           </button>
@@ -128,7 +139,6 @@ export default function ProfitLoss() {
         </div>
       </div>
 
-      {/* Bộ lọc thời gian */}
       <div className="card py-4">
         <div className="flex items-center flex-wrap gap-3">
           <div className="flex gap-1.5 flex-wrap">
@@ -195,44 +205,48 @@ export default function ProfitLoss() {
 
           {d.daily.length > 0 && (
             <div className="card p-0 overflow-hidden">
-              <div className="px-6 py-4 border-b flex items-center justify-between">
+              <div className="px-6 py-4 border-b">
                 <h2 className="font-semibold text-gray-800">Chi tiết theo ngày</h2>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50">
-                    <tr>{['Ngày', 'Doanh thu', 'Giá vốn', 'Lợi nhuận gộp', 'Biên lợi nhuận'].map(h => (
-                      <th key={h} className="px-4 py-3 text-left font-medium text-gray-600">{h}</th>
-                    ))}</tr>
+                    <tr>
+                      {visCols.map(c => (
+                        <th key={c.key} className="px-4 py-3 text-left font-medium text-gray-600">{c.label}</th>
+                      ))}
+                    </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {d.daily.map((row: any) => {
                       const margin = row.revenue ? (row.grossProfit / row.revenue * 100) : 0
                       return (
                         <tr key={row.date} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 font-medium text-gray-700">{row.date}</td>
-                          <td className="px-4 py-3 text-blue-600">{fmt(row.revenue)}</td>
-                          <td className="px-4 py-3 text-orange-600">{fmt(row.cogs)}</td>
-                          <td className={`px-4 py-3 font-medium ${row.grossProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>{fmt(row.grossProfit)}</td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 h-2 bg-gray-100 rounded-full">
-                                <div className={`h-2 rounded-full ${margin >= 0 ? 'bg-green-400' : 'bg-red-400'}`} style={{ width: `${Math.min(Math.abs(margin), 100)}%` }} />
+                          {visible.has('date') && <td className="px-4 py-3 font-medium text-gray-700">{row.date}</td>}
+                          {visible.has('revenue') && <td className="px-4 py-3 text-blue-600">{fmt(row.revenue)}</td>}
+                          {visible.has('cogs') && <td className="px-4 py-3 text-orange-600">{fmt(row.cogs)}</td>}
+                          {visible.has('grossProfit') && <td className={`px-4 py-3 font-medium ${row.grossProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>{fmt(row.grossProfit)}</td>}
+                          {visible.has('grossMargin') && (
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 h-2 bg-gray-100 rounded-full">
+                                  <div className={`h-2 rounded-full ${margin >= 0 ? 'bg-green-400' : 'bg-red-400'}`} style={{ width: `${Math.min(Math.abs(margin), 100)}%` }} />
+                                </div>
+                                <span className={`text-xs font-medium ${margin >= 0 ? 'text-green-600' : 'text-red-600'}`}>{margin.toFixed(1)}%</span>
                               </div>
-                              <span className={`text-xs font-medium ${margin >= 0 ? 'text-green-600' : 'text-red-600'}`}>{margin.toFixed(1)}%</span>
-                            </div>
-                          </td>
+                            </td>
+                          )}
                         </tr>
                       )
                     })}
                   </tbody>
                   <tfoot className="bg-gray-50 font-semibold">
                     <tr>
-                      <td className="px-4 py-3">Tổng cộng</td>
-                      <td className="px-4 py-3 text-blue-600">{fmt(d.revenue)}</td>
-                      <td className="px-4 py-3 text-orange-600">{fmt(d.cogs)}</td>
-                      <td className={`px-4 py-3 ${d.grossProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>{fmt(d.grossProfit)}</td>
-                      <td className={`px-4 py-3 text-sm ${d.grossMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>{d.grossMargin.toFixed(1)}%</td>
+                      {visible.has('date') && <td className="px-4 py-3">Tổng cộng</td>}
+                      {visible.has('revenue') && <td className="px-4 py-3 text-blue-600">{fmt(d.revenue)}</td>}
+                      {visible.has('cogs') && <td className="px-4 py-3 text-orange-600">{fmt(d.cogs)}</td>}
+                      {visible.has('grossProfit') && <td className={`px-4 py-3 ${d.grossProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>{fmt(d.grossProfit)}</td>}
+                      {visible.has('grossMargin') && <td className={`px-4 py-3 text-sm ${d.grossMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>{d.grossMargin.toFixed(1)}%</td>}
                     </tr>
                   </tfoot>
                 </table>

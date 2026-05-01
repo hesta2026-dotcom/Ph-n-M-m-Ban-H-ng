@@ -4,6 +4,7 @@ import api from '../../services/api'
 import toast from 'react-hot-toast'
 import { CheckCircle, TrendingDown, TrendingUp, X, FileSpreadsheet, FileText } from 'lucide-react'
 import { exportExcel, exportPDF, PRESETS, fmtPeriod } from '../../utils/export'
+import ColumnPicker, { ColDef } from '../../components/ColumnPicker'
 
 const fmt = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
 const fmtMoney = (n: number) => n === 0 ? '' : n.toLocaleString('vi-VN')
@@ -11,6 +12,16 @@ const parseMoney = (s: string) => +s.replace(/[^0-9]/g, '') || 0
 const PAY_LABEL: any = { CASH: 'Tiền mặt', CARD: 'Thẻ ngân hàng', TRANSFER: 'Chuyển khoản', DEBT: 'Ghi nợ', MIXED: 'Hỗn hợp' }
 const ORDER_STATUS: any = { PENDING: 'Chờ xử lý', COMPLETED: 'Hoàn thành', CANCELLED: 'Đã hủy', REFUNDED: 'Hoàn hàng' }
 const ORDER_STATUS_CLASS: any = { PENDING: 'badge-yellow', COMPLETED: 'badge-green', CANCELLED: 'badge-red', REFUNDED: 'badge-blue' }
+
+const COLS: ColDef[] = [
+  { key: 'party', label: 'Đối tác' },
+  { key: 'note', label: 'Diễn giải' },
+  { key: 'amount', label: 'Tổng tiền' },
+  { key: 'payInput', label: 'Nhập số tiền' },
+  { key: 'remaining', label: 'Còn lại' },
+  { key: 'status', label: 'Trạng thái' },
+  { key: 'createdAt', label: 'Ngày tạo' },
+]
 
 export default function Debts() {
   const [type, setType] = useState('SUPPLIER')
@@ -21,6 +32,7 @@ export default function Debts() {
   const [activePreset, setActivePreset] = useState('Tháng này')
   const [payAmount, setPayAmount] = useState<{ [id: string]: number }>({})
   const [viewDebt, setViewDebt] = useState<any>(null)
+  const [visible, setVisible] = useState<Set<string>>(() => new Set(COLS.map(c => c.key)))
   const qc = useQueryClient()
 
   const applyPreset = (p: typeof PRESETS[number]) => {
@@ -52,18 +64,15 @@ export default function Debts() {
     }
   })
 
-  // Fetch order detail khi click vào tổng tiền (chỉ cho CUSTOMER debts có orderId)
   const { data: orderDetail, isLoading: loadingOrder } = useQuery({
     queryKey: ['debt-order', viewDebt?.orderId],
     queryFn: () => api.get(`/orders/${viewDebt.orderId}`).then(r => r.data),
     enabled: !!viewDebt?.orderId
   })
 
-  // Fetch purchase detail khi click vào tổng tiền (chỉ cho SUPPLIER debts)
   const { data: purchaseDetail, isLoading: loadingPurchase } = useQuery({
     queryKey: ['debt-purchase', viewDebt?.id],
     queryFn: async () => {
-      // Tìm phiếu nhập theo note chứa mã phiếu
       const code = viewDebt?.note?.replace('Phiếu nhập ', '')
       if (!code) return null
       const res = await api.get(`/purchases?limit=100`)
@@ -84,35 +93,7 @@ export default function Debts() {
     onError: (e: any) => toast.error(e.response?.data?.message || 'Lỗi')
   })
 
-  const switchType = (newType: string) => {
-    setType(newType)
-    setStatus('')
-  }
-
-  const fmt2 = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
-  const handleExcel = () => {
-    const colName = type === 'CUSTOMER' ? 'Khách hàng' : 'Nhà cung cấp'
-    const paidCol = type === 'SUPPLIER' ? 'Đã trả' : 'Đã thu'
-    const remainCol = type === 'SUPPLIER' ? 'Còn phải trả' : 'Còn phải thu'
-    const headers = [colName, 'Diễn giải', 'Tổng tiền', paidCol, remainCol, 'Trạng thái', 'Ngày tạo']
-    const rows = (data?.data || []).map((d: any) => [
-      d.customer?.name || d.supplier?.name || '-', d.note || '-',
-      d.amount, d.paid, d.remaining, statusLabel(d), new Date(d.createdAt).toLocaleDateString('vi-VN')
-    ])
-    exportExcel(`Cong-no_${from}_${to}`, 'Cong no', headers, rows)
-  }
-  const handlePDF = () => {
-    const colName = type === 'CUSTOMER' ? 'Khách hàng' : 'Nhà cung cấp'
-    const paidCol = type === 'SUPPLIER' ? 'Đã trả' : 'Đã thu'
-    const remainCol = type === 'SUPPLIER' ? 'Còn phải trả' : 'Còn phải thu'
-    const headers = [colName, 'Diễn giải', 'Tổng tiền', paidCol, remainCol, 'Trạng thái']
-    const rows = (data?.data || []).map((d: any) => [
-      d.customer?.name || d.supplier?.name || '-', d.note || '-',
-      fmt2(d.amount), fmt2(d.paid), fmt2(d.remaining), statusLabel(d)
-    ])
-    const title = type === 'CUSTOMER' ? 'Phải thu khách hàng' : 'Nợ nhà cung cấp'
-    exportPDF(`Cong-no_${from}_${to}`, title, fmtPeriod(from, to), headers, rows)
-  }
+  const switchType = (newType: string) => { setType(newType); setStatus('') }
 
   const statusLabel = (d: any) => {
     if (d.status === 'PAID') return d.type === 'SUPPLIER' ? 'Đã trả' : 'Đã thu'
@@ -120,9 +101,43 @@ export default function Debts() {
     return d.type === 'SUPPLIER' ? 'Phải trả' : 'Phải thu'
   }
   const statusClass: any = { UNPAID: 'badge-red', PARTIAL: 'badge-yellow', PAID: 'badge-green' }
-  const colHeader = type === 'CUSTOMER' ? 'Khách hàng' : 'Nhà cung cấp'
-  const payBtnLabel = type === 'SUPPLIER' ? 'Thanh toán NCC' : 'Thu tiền khách hàng'
   const unpaidLabel = type === 'SUPPLIER' ? 'Phải trả' : 'Phải thu'
+  const payBtnLabel = type === 'SUPPLIER' ? 'Thanh toán NCC' : 'Thu tiền khách hàng'
+
+  const exportCols = COLS.filter(c => visible.has(c.key) && c.key !== 'payInput')
+  const visCols = COLS.filter(c => visible.has(c.key))
+
+  const getExportVal = (d: any, key: string) => {
+    switch (key) {
+      case 'party': return d.customer?.name || d.supplier?.name || '-'
+      case 'note': return d.note || '-'
+      case 'amount': return d.amount
+      case 'remaining': return d.remaining
+      case 'status': return statusLabel(d)
+      case 'createdAt': return new Date(d.createdAt).toLocaleDateString('vi-VN')
+      default: return ''
+    }
+  }
+
+  const handleExcel = () => {
+    const headers = exportCols.map(c =>
+      c.key === 'party' ? (type === 'CUSTOMER' ? 'Khách hàng' : 'Nhà cung cấp') : c.label
+    )
+    const rows = (data?.data || []).map((d: any) => exportCols.map(c => getExportVal(d, c.key)))
+    exportExcel(`Cong-no_${from}_${to}`, 'Cong no', headers, rows)
+  }
+
+  const handlePDF = () => {
+    const headers = exportCols.map(c =>
+      c.key === 'party' ? (type === 'CUSTOMER' ? 'Khách hàng' : 'Nhà cung cấp') : c.label
+    )
+    const rows = (data?.data || []).map((d: any) => exportCols.map(c => {
+      if (c.key === 'amount' || c.key === 'remaining') return fmt(d[c.key])
+      return getExportVal(d, c.key)
+    }))
+    const title = type === 'CUSTOMER' ? 'Phải thu khách hàng' : 'Nợ nhà cung cấp'
+    exportPDF(`Cong-no_${from}_${to}`, title, fmtPeriod(from, to), headers, rows)
+  }
 
   const detail = viewDebt?.type === 'CUSTOMER' ? orderDetail : purchaseDetail
   const loadingDetail = loadingOrder || loadingPurchase
@@ -131,7 +146,6 @@ export default function Debts() {
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Công nợ</h1>
 
-      {/* Bộ lọc thời gian */}
       <div className="card py-3">
         <div className="flex items-center flex-wrap gap-3">
           <div className="flex gap-1.5 flex-wrap">
@@ -151,7 +165,6 @@ export default function Debts() {
         </div>
       </div>
 
-      {/* Tổng quan */}
       <div className="grid grid-cols-2 gap-4">
         <div className="card p-4 flex items-center gap-3 cursor-pointer hover:bg-red-50/30 transition-colors" onClick={() => switchType('SUPPLIER')}>
           <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -175,7 +188,6 @@ export default function Debts() {
         </div>
       </div>
 
-      {/* Filter tabs */}
       <div className="flex gap-2 flex-wrap items-center">
         {[['SUPPLIER', 'Nợ nhà cung cấp'], ['CUSTOMER', 'Phải thu khách hàng']].map(([val, label]) => (
           <button key={val} onClick={() => switchType(val)}
@@ -183,7 +195,8 @@ export default function Debts() {
             {label}
           </button>
         ))}
-        <div className="flex gap-2 ml-auto">
+        <div className="flex gap-2 ml-auto items-center">
+          <ColumnPicker cols={COLS} visible={visible} onChange={setVisible} />
           <button onClick={handleExcel} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700">
             <FileSpreadsheet size={14} /> Excel
           </button>
@@ -205,46 +218,57 @@ export default function Debts() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b">
             <tr>
-              {[colHeader, 'Diễn giải', 'Tổng tiền', type === 'SUPPLIER' ? 'Số tiền đã trả' : 'Số tiền đã thu', type === 'SUPPLIER' ? 'Còn phải trả' : 'Còn phải thu', 'Trạng thái', 'Ngày tạo', 'Thao tác'].map(h => (
-                <th key={h} className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">{h}</th>
-              ))}
+              {visCols.map(c => {
+                let label = c.label
+                if (c.key === 'party') label = type === 'CUSTOMER' ? 'Khách hàng' : 'Nhà cung cấp'
+                if (c.key === 'payInput') label = type === 'SUPPLIER' ? 'Số tiền đã trả' : 'Số tiền đã thu'
+                if (c.key === 'remaining') label = type === 'SUPPLIER' ? 'Còn phải trả' : 'Còn phải thu'
+                return <th key={c.key} className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">{label}</th>
+              })}
+              <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {data?.data?.map((d: any) => (
               <tr key={d.id} className={`hover:bg-gray-50 ${d.status === 'UNPAID' ? 'bg-red-50/30' : ''}`}>
-                <td className="px-4 py-3 font-medium">{d.customer?.name || d.supplier?.name || '-'}</td>
-                <td className="px-4 py-3 text-gray-400 text-xs max-w-[160px] truncate">{d.note || '-'}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <button
-                    onClick={() => setViewDebt(d)}
-                    className="font-semibold text-blue-600 hover:text-blue-800 hover:underline">
-                    {fmt(d.amount)}
-                  </button>
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <div className="relative w-32">
-                    <input
-                      className="border rounded px-2 py-1 w-full text-sm text-right pr-5 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                      placeholder="Nhập số tiền..."
-                      value={fmtMoney(payAmount[d.id] ?? 0)}
-                      onChange={e => setPayAmount(p => ({ ...p, [d.id]: parseMoney(e.target.value) }))}
-                    />
-                    <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs">đ</span>
-                  </div>
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap">
-                  {d.remaining > 0
-                    ? <span className="font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">{fmt(d.remaining)}</span>
-                    : <span className="text-gray-400 text-xs">—</span>}
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-col gap-0.5">
-                    <span className={`badge ${statusClass[d.status]}`}>{statusLabel(d)}</span>
-                    {d.paid > 0 && <span className="text-xs text-green-600">{fmt(d.paid)}</span>}
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-gray-400 whitespace-nowrap text-xs">{new Date(d.createdAt).toLocaleDateString('vi-VN')}</td>
+                {visible.has('party') && <td className="px-4 py-3 font-medium">{d.customer?.name || d.supplier?.name || '-'}</td>}
+                {visible.has('note') && <td className="px-4 py-3 text-gray-400 text-xs max-w-[160px] truncate">{d.note || '-'}</td>}
+                {visible.has('amount') && (
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <button onClick={() => setViewDebt(d)} className="font-semibold text-blue-600 hover:text-blue-800 hover:underline">
+                      {fmt(d.amount)}
+                    </button>
+                  </td>
+                )}
+                {visible.has('payInput') && (
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="relative w-32">
+                      <input
+                        className="border rounded px-2 py-1 w-full text-sm text-right pr-5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                        placeholder="Nhập số tiền..."
+                        value={fmtMoney(payAmount[d.id] ?? 0)}
+                        onChange={e => setPayAmount(p => ({ ...p, [d.id]: parseMoney(e.target.value) }))}
+                      />
+                      <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs">đ</span>
+                    </div>
+                  </td>
+                )}
+                {visible.has('remaining') && (
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {d.remaining > 0
+                      ? <span className="font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">{fmt(d.remaining)}</span>
+                      : <span className="text-gray-400 text-xs">—</span>}
+                  </td>
+                )}
+                {visible.has('status') && (
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col gap-0.5">
+                      <span className={`badge ${statusClass[d.status]}`}>{statusLabel(d)}</span>
+                      {d.paid > 0 && <span className="text-xs text-green-600">{fmt(d.paid)}</span>}
+                    </div>
+                  </td>
+                )}
+                {visible.has('createdAt') && <td className="px-4 py-3 text-gray-400 whitespace-nowrap text-xs">{new Date(d.createdAt).toLocaleDateString('vi-VN')}</td>}
                 <td className="px-4 py-3">
                   <button
                     onClick={() => pay.mutate({ id: d.id, amount: payAmount[d.id] })}
@@ -257,7 +281,7 @@ export default function Debts() {
               </tr>
             ))}
             {!data?.data?.length && (
-              <tr><td colSpan={8} className="text-center py-10 text-gray-400">
+              <tr><td colSpan={visCols.length + 1} className="text-center py-10 text-gray-400">
                 {status === 'UNPAID' ? `Không có khoản ${unpaidLabel.toLowerCase()} nào` : 'Không có dữ liệu'}
               </td></tr>
             )}
@@ -265,7 +289,6 @@ export default function Debts() {
         </table>
       </div>
 
-      {/* ===== Modal chi tiết đơn hàng / phiếu nhập ===== */}
       {viewDebt && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
@@ -278,8 +301,6 @@ export default function Debts() {
             </div>
             <div className="overflow-y-auto p-6 space-y-4">
               {loadingDetail && <p className="text-center text-gray-400 py-8">Đang tải...</p>}
-
-              {/* Chi tiết đơn hàng (CUSTOMER) */}
               {!loadingDetail && detail && viewDebt.type === 'CUSTOMER' && (
                 <>
                   <div className="grid grid-cols-2 gap-3 text-sm bg-gray-50 rounded-xl p-4">
@@ -301,10 +322,7 @@ export default function Debts() {
                     <tbody className="divide-y">
                       {detail.items?.map((item: any, i: number) => (
                         <tr key={i}>
-                          <td className="px-3 py-2">
-                            <p>{item.product?.name}</p>
-                            <p className="text-xs text-gray-400 font-mono">{item.product?.code}</p>
-                          </td>
+                          <td className="px-3 py-2"><p>{item.product?.name}</p><p className="text-xs text-gray-400 font-mono">{item.product?.code}</p></td>
                           <td className="px-3 py-2 text-gray-500">{item.unit || item.product?.unit || 'cái'}</td>
                           <td className="px-3 py-2 font-medium">{item.qty}</td>
                           <td className="px-3 py-2">{fmt(item.price)}</td>
@@ -324,8 +342,6 @@ export default function Debts() {
                   </div>
                 </>
               )}
-
-              {/* Chi tiết phiếu nhập (SUPPLIER) */}
               {!loadingDetail && detail && viewDebt.type === 'SUPPLIER' && (
                 <>
                   <div className="grid grid-cols-2 gap-3 text-sm bg-gray-50 rounded-xl p-4">
@@ -343,10 +359,7 @@ export default function Debts() {
                     <tbody className="divide-y">
                       {detail.items?.map((item: any, i: number) => (
                         <tr key={i}>
-                          <td className="px-3 py-2">
-                            <p>{item.product?.name}</p>
-                            <p className="text-xs text-gray-400 font-mono">{item.product?.code}</p>
-                          </td>
+                          <td className="px-3 py-2"><p>{item.product?.name}</p><p className="text-xs text-gray-400 font-mono">{item.product?.code}</p></td>
                           <td className="px-3 py-2 font-medium">{item.qty}</td>
                           <td className="px-3 py-2">{fmt(item.costPrice)}</td>
                           <td className="px-3 py-2 font-semibold text-blue-600">{fmt(item.total)}</td>
@@ -365,7 +378,6 @@ export default function Debts() {
                   </div>
                 </>
               )}
-
               {!loadingDetail && !detail && (
                 <p className="text-center text-gray-400 py-8">Không tìm thấy thông tin chi tiết</p>
               )}

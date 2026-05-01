@@ -4,8 +4,18 @@ import api from '../../services/api'
 import toast from 'react-hot-toast'
 import { Plus, TrendingUp, TrendingDown, FileSpreadsheet, FileText } from 'lucide-react'
 import { exportExcel, exportPDF, PRESETS, fmtPeriod } from '../../utils/export'
+import ColumnPicker, { ColDef } from '../../components/ColumnPicker'
 
 const fmt = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
+
+const COLS: ColDef[] = [
+  { key: 'type', label: 'Loại' },
+  { key: 'category', label: 'Danh mục' },
+  { key: 'amount', label: 'Số tiền' },
+  { key: 'description', label: 'Mô tả' },
+  { key: 'user', label: 'Người tạo' },
+  { key: 'createdAt', label: 'Ngày' },
+]
 
 export default function Expenses() {
   const [type, setType] = useState('')
@@ -14,6 +24,7 @@ export default function Expenses() {
   const [activePreset, setActivePreset] = useState('Tháng này')
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ type: 'EXPENSE', category: '', amount: 0, description: '' })
+  const [visible, setVisible] = useState<Set<string>>(() => new Set(COLS.map(c => c.key)))
   const qc = useQueryClient()
 
   const applyPreset = (p: typeof PRESETS[number]) => {
@@ -42,21 +53,31 @@ export default function Expenses() {
     onError: (e: any) => toast.error(e.response?.data?.message || 'Lỗi')
   })
 
+  const getVal = (e: any, key: string) => {
+    switch (key) {
+      case 'type': return e.type === 'INCOME' ? 'Thu' : 'Chi'
+      case 'category': return e.category
+      case 'amount': return e.amount
+      case 'description': return e.description || ''
+      case 'user': return e.user?.name || ''
+      case 'createdAt': return new Date(e.createdAt).toLocaleDateString('vi-VN')
+      default: return ''
+    }
+  }
+
+  const visCols = COLS.filter(c => visible.has(c.key))
+
   const handleExcel = () => {
-    const headers = ['Loại', 'Danh mục', 'Số tiền', 'Mô tả', 'Người tạo', 'Ngày']
-    const rows = (data?.data || []).map((e: any) => [
-      e.type === 'INCOME' ? 'Thu' : 'Chi', e.category, e.amount,
-      e.description || '', e.user?.name || '', new Date(e.createdAt).toLocaleDateString('vi-VN')
-    ])
+    const headers = visCols.map(c => c.label)
+    const rows = (data?.data || []).map((e: any) => visCols.map(c => getVal(e, c.key)))
     exportExcel(`Thu-chi_${from}_${to}`, 'Thu chi', headers, rows)
   }
 
   const handlePDF = () => {
-    const headers = ['Loại', 'Danh mục', 'Số tiền', 'Mô tả', 'Người tạo', 'Ngày']
-    const rows = (data?.data || []).map((e: any) => [
-      e.type === 'INCOME' ? 'Thu' : 'Chi', e.category, fmt(e.amount),
-      e.description || '', e.user?.name || '', new Date(e.createdAt).toLocaleDateString('vi-VN')
-    ])
+    const headers = visCols.map(c => c.label)
+    const rows = (data?.data || []).map((e: any) => visCols.map(c =>
+      c.key === 'amount' ? fmt(e.amount) : getVal(e, c.key)
+    ))
     exportPDF(`Thu-chi_${from}_${to}`, 'Báo cáo thu chi', fmtPeriod(from, to), headers, rows)
   }
 
@@ -67,7 +88,6 @@ export default function Expenses() {
         <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2"><Plus size={18} /> Ghi nhận thu/chi</button>
       </div>
 
-      {/* Bộ lọc thời gian */}
       <div className="card py-3">
         <div className="flex items-center flex-wrap gap-3">
           <div className="flex gap-1.5 flex-wrap">
@@ -106,7 +126,8 @@ export default function Expenses() {
             <button key={val} onClick={() => setType(val)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${type === val ? 'bg-blue-600 text-white' : 'bg-white border hover:bg-gray-50'}`}>{label}</button>
           ))}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <ColumnPicker cols={COLS} visible={visible} onChange={setVisible} />
           <button onClick={handleExcel} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700">
             <FileSpreadsheet size={15} /> Excel
           </button>
@@ -118,19 +139,23 @@ export default function Expenses() {
 
       <div className="card p-0 overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b"><tr>{['Loại', 'Danh mục', 'Số tiền', 'Mô tả', 'Người tạo', 'Ngày'].map(h => <th key={h} className="px-4 py-3 text-left font-medium text-gray-600">{h}</th>)}</tr></thead>
+          <thead className="bg-gray-50 border-b">
+            <tr>
+              {visCols.map(c => <th key={c.key} className="px-4 py-3 text-left font-medium text-gray-600">{c.label}</th>)}
+            </tr>
+          </thead>
           <tbody className="divide-y">
             {data?.data?.map((e: any) => (
               <tr key={e.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3"><span className={`badge ${e.type === 'INCOME' ? 'badge-green' : 'badge-red'}`}>{e.type === 'INCOME' ? 'Thu' : 'Chi'}</span></td>
-                <td className="px-4 py-3">{e.category}</td>
-                <td className={`px-4 py-3 font-semibold ${e.type === 'INCOME' ? 'text-green-600' : 'text-red-600'}`}>{fmt(e.amount)}</td>
-                <td className="px-4 py-3 text-gray-500">{e.description || '-'}</td>
-                <td className="px-4 py-3 text-gray-500">{e.user?.name}</td>
-                <td className="px-4 py-3 text-gray-400">{new Date(e.createdAt).toLocaleDateString('vi-VN')}</td>
+                {visible.has('type') && <td className="px-4 py-3"><span className={`badge ${e.type === 'INCOME' ? 'badge-green' : 'badge-red'}`}>{e.type === 'INCOME' ? 'Thu' : 'Chi'}</span></td>}
+                {visible.has('category') && <td className="px-4 py-3">{e.category}</td>}
+                {visible.has('amount') && <td className={`px-4 py-3 font-semibold ${e.type === 'INCOME' ? 'text-green-600' : 'text-red-600'}`}>{fmt(e.amount)}</td>}
+                {visible.has('description') && <td className="px-4 py-3 text-gray-500">{e.description || '-'}</td>}
+                {visible.has('user') && <td className="px-4 py-3 text-gray-500">{e.user?.name}</td>}
+                {visible.has('createdAt') && <td className="px-4 py-3 text-gray-400">{new Date(e.createdAt).toLocaleDateString('vi-VN')}</td>}
               </tr>
             ))}
-            {!data?.data?.length && <tr><td colSpan={6} className="text-center py-10 text-gray-400">Không có dữ liệu</td></tr>}
+            {!data?.data?.length && <tr><td colSpan={visCols.length} className="text-center py-10 text-gray-400">Không có dữ liệu</td></tr>}
           </tbody>
         </table>
       </div>

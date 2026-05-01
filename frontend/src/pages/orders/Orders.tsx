@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../../services/api'
 import toast from 'react-hot-toast'
@@ -6,6 +6,7 @@ import { Eye, Plus, FileText, CheckCircle, XCircle, RotateCcw, Search, FileSprea
 import CreateOrderModal from './CreateOrderModal'
 import ExportSlip from './ExportSlip'
 import { exportExcel, exportPDF, PRESETS, fmtPeriod } from '../../utils/export'
+import ColumnPicker, { ColDef } from '../../components/ColumnPicker'
 
 const fmt = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
 const STATUS_LABEL: any = { PENDING: 'Chờ xử lý', COMPLETED: 'Hoàn thành', CANCELLED: 'Đã hủy', REFUNDED: 'Hoàn hàng' }
@@ -23,6 +24,16 @@ const TRANSITIONS: Record<string, { label: string; next: string; icon: any; cls:
   ],
 }
 
+const COLS: ColDef[] = [
+  { key: 'orderCode', label: 'Mã đơn' },
+  { key: 'customer', label: 'Khách hàng' },
+  { key: 'user', label: 'Nhân viên' },
+  { key: 'paymentMethod', label: 'Thanh toán' },
+  { key: 'total', label: 'Tổng tiền' },
+  { key: 'status', label: 'Trạng thái' },
+  { key: 'createdAt', label: 'Thời gian' },
+]
+
 export default function Orders() {
   const qc = useQueryClient()
   const now = new Date()
@@ -35,6 +46,7 @@ export default function Orders() {
   const [selected, setSelected] = useState<any>(null)
   const [slipOrder, setSlipOrder] = useState<any>(null)
   const [showCreate, setShowCreate] = useState(false)
+  const [visible, setVisible] = useState<Set<string>>(() => new Set(COLS.map(c => c.key)))
 
   const applyPreset = (p: typeof PRESETS[number]) => {
     const [f, t] = p.getDates(); setFrom(f); setTo(t); setActivePreset(p.label); setPage(1)
@@ -65,21 +77,32 @@ export default function Orders() {
     if (window.confirm(msg[next] || 'Xác nhận?')) updateStatus({ id: order.id, next })
   }
 
+  const getVal = (o: any, key: string) => {
+    switch (key) {
+      case 'orderCode': return o.orderCode
+      case 'customer': return o.customer?.name || 'Khách lẻ'
+      case 'user': return o.user?.name || ''
+      case 'paymentMethod': return PAY_LABEL[o.paymentMethod]
+      case 'total': return o.total
+      case 'status': return STATUS_LABEL[o.status]
+      case 'createdAt': return new Date(o.createdAt).toLocaleString('vi-VN')
+      default: return ''
+    }
+  }
+
+  const visCols = COLS.filter(c => visible.has(c.key))
+
   const handleExcel = () => {
-    const headers = ['Mã đơn', 'Khách hàng', 'SĐT', 'Nhân viên', 'Thanh toán', 'Tổng tiền', 'Trạng thái', 'Thời gian']
-    const rows = (data?.data || []).map((o: any) => [
-      o.orderCode, o.customer?.name || 'Khách lẻ', o.customer?.phone || '', o.user?.name || '',
-      PAY_LABEL[o.paymentMethod], o.total, STATUS_LABEL[o.status], new Date(o.createdAt).toLocaleString('vi-VN')
-    ])
+    const headers = visCols.map(c => c.label)
+    const rows = (data?.data || []).map((o: any) => visCols.map(c => getVal(o, c.key)))
     exportExcel(`Don-hang_${from}_${to}`, 'Don hang', headers, rows)
   }
 
   const handlePDF = () => {
-    const headers = ['Mã đơn', 'Khách hàng', 'Thanh toán', 'Tổng tiền', 'Trạng thái', 'Thời gian']
-    const rows = (data?.data || []).map((o: any) => [
-      o.orderCode, o.customer?.name || 'Khách lẻ', PAY_LABEL[o.paymentMethod],
-      fmt(o.total), STATUS_LABEL[o.status], new Date(o.createdAt).toLocaleDateString('vi-VN')
-    ])
+    const headers = visCols.map(c => c.label)
+    const rows = (data?.data || []).map((o: any) => visCols.map(c =>
+      c.key === 'total' ? fmt(o.total) : getVal(o, c.key)
+    ))
     exportPDF(`Don-hang_${from}_${to}`, 'Danh sach don hang', fmtPeriod(from, to), headers, rows)
   }
 
@@ -125,7 +148,8 @@ export default function Orders() {
           <input className="input pl-9 py-1.5 text-sm w-56" placeholder="Tìm mã đơn hàng..."
             value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} />
         </div>
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex gap-2 items-center">
+          <ColumnPicker cols={COLS} visible={visible} onChange={setVisible} />
           <button onClick={handleExcel} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700">
             <FileSpreadsheet size={14} /> Excel
           </button>
@@ -140,42 +164,46 @@ export default function Orders() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
-                {['Mã đơn', 'Khách hàng', 'Nhân viên', 'Thanh toán', 'Tổng tiền', 'Trạng thái', 'Thời gian', 'Thao tác'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">{h}</th>
+                {visCols.map(c => (
+                  <th key={c.key} className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">{c.label}</th>
                 ))}
+                <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y">
-              {isLoading && <tr><td colSpan={8} className="text-center py-10 text-gray-400">Đang tải...</td></tr>}
-              {!isLoading && !data?.data?.length && <tr><td colSpan={8} className="text-center py-10 text-gray-400">Không có đơn hàng nào</td></tr>}
+              {isLoading && <tr><td colSpan={visCols.length + 1} className="text-center py-10 text-gray-400">Đang tải...</td></tr>}
+              {!isLoading && !data?.data?.length && <tr><td colSpan={visCols.length + 1} className="text-center py-10 text-gray-400">Không có đơn hàng nào</td></tr>}
               {data?.data?.map((o: any) => (
                 <tr key={o.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-mono text-xs font-semibold text-blue-700">{o.orderCode}</td>
-                  <td className="px-4 py-3">
-                    <p className="font-medium">{o.customer?.name || 'Khách lẻ'}</p>
-                    {o.customer?.phone && <p className="text-xs text-gray-400">{o.customer.phone}</p>}
-                    {o.customer?.address && <p className="text-xs text-gray-400 truncate max-w-[160px]">{o.customer.address}</p>}
-                  </td>
-                  <td className="px-4 py-3 text-gray-500">{o.user?.name}</td>
-                  <td className="px-4 py-3"><span className="badge badge-blue">{PAY_LABEL[o.paymentMethod]}</span></td>
-                  <td className="px-4 py-3 font-semibold text-blue-600 whitespace-nowrap">{fmt(o.total)}</td>
-                  <td className="px-4 py-3">
-                    {o.status === 'PENDING' ? (
-                      <div className="flex flex-col gap-1">
-                        <button onClick={() => confirmTransition(o, 'COMPLETED')} disabled={isUpdating}
-                          className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700 hover:bg-green-200 disabled:opacity-50 whitespace-nowrap">
-                          Hoàn thành
-                        </button>
-                        <button onClick={() => confirmTransition(o, 'CANCELLED')} disabled={isUpdating}
-                          className="px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-600 hover:bg-red-200 disabled:opacity-50 whitespace-nowrap">
-                          Hủy đơn
-                        </button>
-                      </div>
-                    ) : (
-                      <span className={`badge ${STATUS_CLASS[o.status]}`}>{STATUS_LABEL[o.status]}</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-gray-400 whitespace-nowrap text-xs">{new Date(o.createdAt).toLocaleString('vi-VN')}</td>
+                  {visible.has('orderCode') && <td className="px-4 py-3 font-mono text-xs font-semibold text-blue-700">{o.orderCode}</td>}
+                  {visible.has('customer') && (
+                    <td className="px-4 py-3">
+                      <p className="font-medium">{o.customer?.name || 'Khách lẻ'}</p>
+                      {o.customer?.phone && <p className="text-xs text-gray-400">{o.customer.phone}</p>}
+                    </td>
+                  )}
+                  {visible.has('user') && <td className="px-4 py-3 text-gray-500">{o.user?.name}</td>}
+                  {visible.has('paymentMethod') && <td className="px-4 py-3"><span className="badge badge-blue">{PAY_LABEL[o.paymentMethod]}</span></td>}
+                  {visible.has('total') && <td className="px-4 py-3 font-semibold text-blue-600 whitespace-nowrap">{fmt(o.total)}</td>}
+                  {visible.has('status') && (
+                    <td className="px-4 py-3">
+                      {o.status === 'PENDING' ? (
+                        <div className="flex flex-col gap-1">
+                          <button onClick={() => confirmTransition(o, 'COMPLETED')} disabled={isUpdating}
+                            className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700 hover:bg-green-200 disabled:opacity-50 whitespace-nowrap">
+                            Hoàn thành
+                          </button>
+                          <button onClick={() => confirmTransition(o, 'CANCELLED')} disabled={isUpdating}
+                            className="px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-600 hover:bg-red-200 disabled:opacity-50 whitespace-nowrap">
+                            Hủy đơn
+                          </button>
+                        </div>
+                      ) : (
+                        <span className={`badge ${STATUS_CLASS[o.status]}`}>{STATUS_LABEL[o.status]}</span>
+                      )}
+                    </td>
+                  )}
+                  {visible.has('createdAt') && <td className="px-4 py-3 text-gray-400 whitespace-nowrap text-xs">{new Date(o.createdAt).toLocaleString('vi-VN')}</td>}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <button title="Chi tiết" onClick={() => setSelected(o)} className="text-blue-500 hover:text-blue-700"><Eye size={16} /></button>
