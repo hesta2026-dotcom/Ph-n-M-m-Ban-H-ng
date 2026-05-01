@@ -788,9 +788,11 @@ export default function Stock() {
                   switch (c.key) {
                     case 'orderCode': return o.orderCode
                     case 'customer': return o.customer?.name || 'Khách lẻ'
+                    case 'orderStatus': return o.status === 'COMPLETED' ? 'Hoàn thành' : 'Chờ xử lý'
                     case 'itemCount': return String(o.items?.length ?? 0)
                     case 'total': return fmt(o.total)
                     case 'paymentMethod': return PAY_LABEL[o.paymentMethod] || o.paymentMethod
+                    case 'warehouseStatus': return WH_LABEL[o.warehouseStatus || 'PENDING'] || o.warehouseStatus
                     case 'user': return o.user?.name || ''
                     case 'createdAt': return new Date(o.createdAt).toLocaleString('vi-VN')
                     default: return ''
