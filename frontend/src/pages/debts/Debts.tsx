@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../../services/api'
 import toast from 'react-hot-toast'
-import { CheckCircle, TrendingDown, TrendingUp, X, FileSpreadsheet, FileText } from 'lucide-react'
+import { CheckCircle, TrendingDown, TrendingUp, X, FileSpreadsheet, FileText, Search } from 'lucide-react'
 import { exportExcel, exportPDF, PRESETS, fmtPeriod } from '../../utils/export'
 import ColumnPicker, { ColDef } from '../../components/ColumnPicker'
 
