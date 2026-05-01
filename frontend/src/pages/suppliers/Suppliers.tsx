@@ -55,6 +55,15 @@ export default function Suppliers() {
     onError: (e: any) => toast.error(e.response?.data?.message || 'Không thể xóa')
   })
 
+  const delBulk = async () => {
+    if (!confirm(`Xóa ${selectedIds.size} nhà cung cấp đã chọn?`)) return
+    const results = await Promise.allSettled([...selectedIds].map(id => api.delete(`/suppliers/${id}`)))
+    const ok = results.filter(r => r.status === 'fulfilled').length
+    const fail = results.length - ok
+    if (ok > 0) { toast.success(`Đã xóa ${ok} nhà cung cấp`); qc.invalidateQueries({ queryKey: ['suppliers'] }); setSelectedIds(new Set()) }
+    if (fail > 0) toast.error(`${fail} NCC không thể xóa (còn phiếu nhập)`)
+  }
+
   const totalPurchased = supplierPurchases?.data?.reduce((s: number, p: any) => s + p.total, 0) ?? 0
   const totalPaid     = supplierPurchases?.data?.reduce((s: number, p: any) => s + p.paid,  0) ?? 0
 
