@@ -71,6 +71,13 @@ router.put('/:id', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    await prisma.customer.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Đã xóa' });
+  } catch (e) { res.status(400).json({ message: 'Không thể xóa khách hàng đang có đơn hàng hoặc công nợ' }); }
+});
+
 router.get('/:id/orders', auth, async (req, res) => {
   try {
     const orders = await prisma.order.findMany({ where: { customerId: req.params.id }, include: { items: { include: { product: true } } }, orderBy: { createdAt: 'desc' }, take: 20 });
