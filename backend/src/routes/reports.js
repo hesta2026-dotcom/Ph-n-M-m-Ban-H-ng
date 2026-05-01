@@ -64,10 +64,10 @@ router.get('/cashflow', auth, async (req, res) => {
 router.get('/profit-loss', auth, async (req, res) => {
   try {
     const { from, to } = req.query;
-    const fromDate = from ? new Date(from) : new Date(new Date().setDate(1));
-    fromDate.setHours(0, 0, 0, 0);
-    const toDate = to ? new Date(to) : new Date();
-    toDate.setHours(23, 59, 59, 999);
+    const now = new Date();
+    const _ld = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const fromDate = new Date((from || _ld(new Date(now.getFullYear(), now.getMonth(), 1))) + 'T00:00:00+07:00');
+    const toDate = new Date((to || _ld(now)) + 'T23:59:59+07:00');
 
     const [orders, expenseAgg, incomeAgg] = await Promise.all([
       prisma.order.findMany({
