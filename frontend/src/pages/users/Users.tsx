@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../../services/api'
 import toast from 'react-hot-toast'
-import { Plus, Edit2 } from 'lucide-react'
+import { Plus, Edit2, Trash2 } from 'lucide-react'
 
 const roleLabel: any = { ADMIN: 'Quản trị', MANAGER: 'Quản lý', STAFF: 'Nhân viên', CASHIER: 'Thu ngân' }
 const roleClass: any = { ADMIN: 'badge-red', MANAGER: 'badge-blue', STAFF: 'badge-green', CASHIER: 'badge-yellow' }
