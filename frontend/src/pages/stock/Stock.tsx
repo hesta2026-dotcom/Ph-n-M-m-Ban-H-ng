@@ -93,7 +93,7 @@ function ProductInfo({ product }: { product: any }) {
 }
 
 export default function Stock() {
-  const [tab, setTab] = useState<'low' | 'all' | 'logs' | 'purchase'>('low')
+  const [tab, setTab] = useState<'low' | 'all' | 'logs' | 'purchase' | 'export'>('low')
   const [viewPurchase, setViewPurchase] = useState<any>(null)
   const now2 = new Date()
   const [from, setFrom] = useState(new Date(now2.getFullYear(), now2.getMonth(), 1).toISOString().slice(0, 10))
