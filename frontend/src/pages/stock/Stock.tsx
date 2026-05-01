@@ -282,8 +282,8 @@ export default function Stock() {
         ))}
       </div>
 
-      {/* Bộ lọc thời gian — hiện cho Lịch sử kho và Phiếu nhập */}
-      {(tab === 'logs' || tab === 'purchase') && (
+      {/* Bộ lọc thời gian — hiện cho Lịch sử kho, Phiếu nhập và Phiếu xuất */}
+      {(tab === 'logs' || tab === 'purchase' || tab === 'export') && (
         <div className="card py-3">
           <div className="flex items-center flex-wrap gap-3">
             <div className="flex gap-1.5 flex-wrap">
