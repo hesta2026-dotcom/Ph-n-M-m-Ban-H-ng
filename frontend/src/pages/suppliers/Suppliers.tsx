@@ -25,6 +25,7 @@ export default function Suppliers() {
   const [viewSupplier, setViewSupplier] = useState<any>(null)
   const [viewPurchase, setViewPurchase] = useState<any>(null)
   const [visible, setVisible] = useState<Set<string>>(() => new Set(COLS.map(c => c.key)))
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const qc = useQueryClient()
 
   const { data } = useQuery({
