@@ -48,6 +48,15 @@ const COLS_PURCHASE: ColDef[] = [
   { key: 'status', label: 'Trạng thái' },
   { key: 'createdAt', label: 'Ngày nhập' },
 ]
+const COLS_EXPORT: ColDef[] = [
+  { key: 'orderCode', label: 'Mã đơn hàng' },
+  { key: 'customer', label: 'Khách hàng' },
+  { key: 'itemCount', label: 'Số SP' },
+  { key: 'total', label: 'Tổng tiền' },
+  { key: 'paymentMethod', label: 'Thanh toán' },
+  { key: 'user', label: 'Nhân viên' },
+  { key: 'createdAt', label: 'Ngày xuất' },
+]
 
 function ProductThumb({ product, size = 'sm' }: { product: any; size?: 'sm' | 'md' }) {
   const imgs: string[] = product?.images ? JSON.parse(product.images) : []
