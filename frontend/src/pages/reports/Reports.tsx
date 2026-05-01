@@ -10,10 +10,19 @@ const fmt = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
 const COLS_REVENUE: ColDef[] = [
   { key: 'orderCode', label: 'Mã đơn' },
   { key: 'customer', label: 'Khách hàng' },
+  { key: 'phone', label: 'SĐT' },
+  { key: 'staff', label: 'Nhân viên' },
   { key: 'channel', label: 'Kênh' },
+  { key: 'paymentMethod', label: 'Thanh toán' },
+  { key: 'items', label: 'Sản phẩm' },
+  { key: 'subtotal', label: 'Tạm tính' },
+  { key: 'discount', label: 'Giảm giá' },
   { key: 'total', label: 'Tổng tiền' },
-  { key: 'createdAt', label: 'Ngày' },
+  { key: 'amountPaid', label: 'Tiền nhận' },
+  { key: 'createdAt', label: 'Ngày giờ' },
 ]
+
+const PAY_LABEL: any = { CASH: 'Tiền mặt', CARD: 'Thẻ', TRANSFER: 'CK', DEBT: 'Ghi nợ', MIXED: 'Hỗn hợp' }
 
 export default function Reports() {
   const _now = new Date()
