@@ -847,23 +847,22 @@ export default function Stock() {
                     {visExport.has('paymentMethod') && (
                       <td className="px-4 py-3"><span className="badge badge-green">{PAY_LABEL[o.paymentMethod]}</span></td>
                     )}
-                    {visExport.has('warehouseStatus') && (() => {
-                      const ws = WH_STATUS[o.warehouseStatus || 'PENDING']
-                      return (
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <span className={`badge ${ws.cls} whitespace-nowrap`}>{ws.label}</span>
-                            <button
-                              title={ws.nextLabel}
-                              disabled={updateWhStatus.isPending}
-                              onClick={() => updateWhStatus.mutate({ id: o.id, warehouseStatus: ws.next })}
-                              className="text-xs text-gray-400 hover:text-blue-600 underline underline-offset-2 whitespace-nowrap disabled:opacity-40">
-                              {ws.next !== 'PENDING' ? ws.nextLabel : '↺'}
-                            </button>
-                          </div>
-                        </td>
-                      )
-                    })()}
+                    {visExport.has('warehouseStatus') && (
+                      <td className="px-4 py-2">
+                        <select
+                          value={o.warehouseStatus || 'PENDING'}
+                          disabled={updateWhStatus.isPending}
+                          onChange={e => updateWhStatus.mutate({ id: o.id, warehouseStatus: e.target.value })}
+                          className={`text-xs font-semibold rounded-lg px-2 py-1.5 border-0 cursor-pointer outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50
+                            ${(o.warehouseStatus || 'PENDING') === 'EXPORTED'  ? 'bg-green-100 text-green-700' :
+                              (o.warehouseStatus || 'PENDING') === 'EXPORTING' ? 'bg-blue-100 text-blue-700' :
+                                                                                  'bg-yellow-100 text-yellow-700'}`}>
+                          <option value="PENDING">Chưa xuất</option>
+                          <option value="EXPORTING">Đang xuất</option>
+                          <option value="EXPORTED">Đã xuất</option>
+                        </select>
+                      </td>
+                    )}
                     {visExport.has('user') && <td className="px-4 py-3 text-gray-500">{o.user?.name}</td>}
                     {visExport.has('createdAt') && <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{new Date(o.createdAt).toLocaleString('vi-VN')}</td>}
                   </tr>
