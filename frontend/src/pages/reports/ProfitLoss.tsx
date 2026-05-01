@@ -48,6 +48,7 @@ export default function ProfitLoss() {
   const [to, setTo] = useState(_ld(now))
   const [activePreset, setActivePreset] = useState('Tháng này')
   const [visible, setVisible] = useState<Set<string>>(() => new Set(COLS_DAILY.map(c => c.key)))
+  const [detailType, setDetailType] = useState<'revenue' | 'cogs' | 'expenses' | 'income' | null>(null)
 
   const applyPreset = (preset: typeof PRESETS[number]) => {
     const [f, t] = preset.getDates(); setFrom(f); setTo(t); setActivePreset(preset.label)
