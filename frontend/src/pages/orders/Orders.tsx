@@ -70,6 +70,12 @@ export default function Orders() {
     onError: (e: any) => toast.error(e.response?.data?.message || 'Lỗi cập nhật trạng thái')
   })
 
+  const { mutate: updateWhStatus } = useMutation({
+    mutationFn: ({ id, warehouseStatus }: { id: string; warehouseStatus: string }) =>
+      api.patch(`/orders/${id}/warehouse-status`, { warehouseStatus }).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['orders'] }),
+  })
+
   const confirmTransition = (order: any, next: string) => {
     const msg: any = {
       COMPLETED: `Xác nhận hoàn thành đơn ${order.orderCode}? Kho sẽ được trừ hàng.`,
