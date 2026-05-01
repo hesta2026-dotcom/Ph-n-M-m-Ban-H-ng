@@ -155,4 +155,29 @@ router.patch('/:id/status', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
+// PATCH /orders/:id/warehouse-status — Cập nhật trạng thái xuất kho
+router.patch('/:id/warehouse-status', auth, async (req, res) => {
+  try {
+    const { warehouseStatus } = req.body;
+    const allowed = ['PENDING', 'EXPORTING', 'EXPORTED'];
+    if (!allowed.includes(warehouseStatus))
+      return res.status(400).json({ message: 'Trạng thái không hợp lệ' });
+
+    const order = await prisma.order.findUnique({ where: { id: req.params.id } });
+    if (!order) return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
+    if (order.status !== 'COMPLETED')
+      return res.status(400).json({ message: 'Chỉ cập nhật trạng thái xuất kho cho đơn đã hoàn thành' });
+
+    const updated = await prisma.order.update({
+      where: { id: req.params.id },
+      data: { warehouseStatus },
+      include: { customer: true, user: { select: { id: true, name: true } } }
+    });
+    await prisma.auditLog.create({
+      data: { userId: req.user.id, action: `WAREHOUSE_${warehouseStatus}`, entity: 'Order', entityId: order.id }
+    });
+    res.json(updated);
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
 module.exports = router;
