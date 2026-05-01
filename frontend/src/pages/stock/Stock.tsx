@@ -236,6 +236,7 @@ export default function Stock() {
   })
 
   const filteredExportOrders = (exportOrders?.data || []).filter((o: any) => {
+    if (o.status === 'CANCELLED' || o.status === 'REFUNDED') return false
     if (filterWhStatus && (o.warehouseStatus || 'PENDING') !== filterWhStatus) return false
     if (!searchExport) return true
     const q = searchExport.toLowerCase()
