@@ -58,6 +58,7 @@ export default function ExportSlip({ order, onClose, onPrint }: Props) {
     win.document.close()
     win.focus()
     setTimeout(() => { win.print(); }, 300)
+    onPrint?.()
   }
 
   const statusLabel: any = { PENDING: 'Chờ xử lý', COMPLETED: 'Hoàn thành', CANCELLED: 'Đã hủy', REFUNDED: 'Hoàn hàng' }
