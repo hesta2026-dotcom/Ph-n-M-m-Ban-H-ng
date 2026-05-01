@@ -52,7 +52,7 @@ router.get('/top-products', auth, async (req, res) => {
 router.get('/cashflow', auth, async (req, res) => {
   try {
     const { from, to } = req.query;
-    const dateFilter = { ...(from && { gte: new Date(from) }), ...(to && { lte: new Date(to) }) };
+    const dateFilter = { ...(from && { gte: new Date(from + 'T00:00:00+07:00') }), ...(to && { lte: new Date(to + 'T23:59:59+07:00') }) };
     const [income, expense] = await Promise.all([
       prisma.expense.aggregate({ where: { type: 'INCOME', createdAt: dateFilter }, _sum: { amount: true } }),
       prisma.expense.aggregate({ where: { type: 'EXPENSE', createdAt: dateFilter }, _sum: { amount: true } }),
