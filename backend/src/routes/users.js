@@ -22,4 +22,11 @@ router.put('/:id', auth, role('ADMIN'), async (req, res) => {
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
+router.delete('/:id', auth, role('ADMIN'), async (req, res) => {
+  try {
+    await prisma.user.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Đã xóa' });
+  } catch (e) { res.status(400).json({ message: 'Không thể xóa nhân viên đang có dữ liệu liên quan' }); }
+});
+
 module.exports = router;
