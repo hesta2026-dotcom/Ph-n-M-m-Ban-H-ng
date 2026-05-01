@@ -99,8 +99,9 @@ export default function Stock() {
   const [tab, setTab] = useState<'low' | 'all' | 'logs' | 'purchase' | 'export'>('low')
   const [viewPurchase, setViewPurchase] = useState<any>(null)
   const now2 = new Date()
-  const [from, setFrom] = useState(new Date(now2.getFullYear(), now2.getMonth(), 1).toISOString().slice(0, 10))
-  const [to, setTo] = useState(now2.toISOString().slice(0, 10))
+  const _ld = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const [from, setFrom] = useState(_ld(new Date(now2.getFullYear(), now2.getMonth(), 1)))
+  const [to, setTo] = useState(_ld(now2))
   const [activePreset, setActivePreset] = useState('Tháng này')
   const applyPreset = (p: typeof PRESETS[number]) => { const [f, t] = p.getDates(); setFrom(f); setTo(t); setActivePreset(p.label) }
   const [showAdjust, setShowAdjust] = useState(false)
