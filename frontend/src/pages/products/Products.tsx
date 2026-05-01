@@ -171,6 +171,16 @@ export default function Products() {
     onSuccess: () => { toast.success('Đã xóa sản phẩm'); qc.invalidateQueries({ queryKey: ['products'] }) }
   })
 
+  const delBulk = async () => {
+    if (!confirm(`Xóa ${selectedIds.size} sản phẩm đã chọn? Thao tác không thể hoàn tác.`)) return
+    try {
+      await Promise.all([...selectedIds].map(id => api.delete(`/products/${id}`)))
+      toast.success(`Đã xóa ${selectedIds.size} sản phẩm`)
+      setSelectedIds(new Set())
+      qc.invalidateQueries({ queryKey: ['products'] })
+    } catch { toast.error('Có lỗi khi xóa') }
+  }
+
   const openEdit = (p: any) => {
     setEditing(p)
     setForm({
