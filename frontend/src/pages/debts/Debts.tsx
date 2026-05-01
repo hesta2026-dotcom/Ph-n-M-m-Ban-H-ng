@@ -27,8 +27,9 @@ export default function Debts() {
   const [type, setType] = useState('SUPPLIER')
   const [status, setStatus] = useState('')
   const now = new Date()
-  const [from, setFrom] = useState(new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10))
-  const [to, setTo] = useState(now.toISOString().slice(0, 10))
+  const _ld = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const [from, setFrom] = useState(_ld(new Date(now.getFullYear(), now.getMonth(), 1)))
+  const [to, setTo] = useState(_ld(now))
   const [activePreset, setActivePreset] = useState('Tháng này')
   const [payAmount, setPayAmount] = useState<{ [id: string]: number }>({})
   const [viewDebt, setViewDebt] = useState<any>(null)
