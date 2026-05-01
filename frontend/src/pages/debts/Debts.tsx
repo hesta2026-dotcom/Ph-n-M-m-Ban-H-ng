@@ -158,6 +158,19 @@ export default function Debts() {
   const detail = viewDebt?.type === 'CUSTOMER' ? orderDetail : purchaseDetail
   const loadingDetail = loadingOrder || loadingPurchase
 
+  const filteredData = (data?.data || []).filter((d: any) => {
+    if (!search) return true
+    const q = search.toLowerCase()
+    return (d.customer?.name || '').toLowerCase().includes(q) ||
+      (d.supplier?.name || '').toLowerCase().includes(q) ||
+      (d.note || '').toLowerCase().includes(q)
+  })
+
+  const selectedDebts = filteredData.filter((d: any) => selectedIds.has(d.id))
+  const selectedTotal = selectedDebts.reduce((s: number, d: any) => s + (payAmount[d.id] || 0), 0)
+  const toggleSelect = (id: string) => setSelectedIds(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
+  const toggleAll = (checked: boolean) => setSelectedIds(checked ? new Set(filteredData.map((d: any) => d.id)) : new Set())
+
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Công nợ</h1>
