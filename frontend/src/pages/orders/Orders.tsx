@@ -183,10 +183,16 @@ export default function Orders() {
             </span>
           )}
           {selectedIds.size > 0 && (
-            <button onClick={() => setSelectedIds(new Set())}
-              className="text-xs text-gray-400 hover:text-gray-600 underline">
-              Bỏ chọn
-            </button>
+            <>
+              <button onClick={delBulk}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700">
+                <Trash2 size={14} /> Xóa ({selectedIds.size})
+              </button>
+              <button onClick={() => setSelectedIds(new Set())}
+                className="text-xs text-gray-400 hover:text-gray-600 underline">
+                Bỏ chọn
+              </button>
+            </>
           )}
           <ColumnPicker cols={COLS} visible={visible} onChange={setVisible} />
           <button onClick={handleExcel} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-sm font-medium ${selectedIds.size > 0 ? 'bg-green-700' : 'bg-green-600 hover:bg-green-700'}`}>
