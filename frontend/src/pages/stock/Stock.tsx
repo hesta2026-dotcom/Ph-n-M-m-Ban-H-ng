@@ -270,8 +270,8 @@ export default function Stock() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1.5">
-        {[['low', 'Hàng sắp hết'], ['all', 'Tất cả sản phẩm'], ['logs', 'Lịch sử kho'], ['purchase', 'Phiếu nhập']].map(([val, label]) => (
+      <div className="flex gap-1.5 flex-wrap">
+        {[['low', 'Hàng sắp hết'], ['all', 'Tất cả sản phẩm'], ['logs', 'Lịch sử kho'], ['purchase', 'Phiếu nhập'], ['export', 'Phiếu xuất']].map(([val, label]) => (
           <button key={val} onClick={() => setTab(val as any)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === val ? 'bg-blue-600 text-white' : 'bg-white border hover:bg-gray-50'}`}>
             {label}
