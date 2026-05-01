@@ -726,7 +726,7 @@ export default function Stock() {
                     {label}
                     {val && (
                       <span className="ml-1 font-bold">
-                        {(exportOrders?.data || []).filter((o: any) => (o.warehouseStatus || 'PENDING') === val).length}
+                        {(exportOrders?.data || []).filter((o: any) => o.status !== 'CANCELLED' && o.status !== 'REFUNDED' && (o.warehouseStatus || 'PENDING') === val).length}
                       </span>
                     )}
                   </button>
