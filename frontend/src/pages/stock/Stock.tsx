@@ -694,6 +694,149 @@ export default function Stock() {
         </div>
       )}
 
+      {/* ── Tab: Phiếu xuất ── */}
+      {tab === 'export' && (
+        <div className="card p-0 overflow-hidden">
+          <div className="px-5 py-3 border-b flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-sm font-medium text-gray-600">Danh sách phiếu xuất hàng</span>
+              <div className="relative">
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input className="input pl-8 py-1.5 text-sm w-60"
+                  placeholder="Tìm mã đơn, khách hàng, NV..."
+                  value={searchExport} onChange={e => { setSearchExport(e.target.value); setSelectedExportIds(new Set()) }} />
+              </div>
+              {selectedExportIds.size > 0 && (
+                <>
+                  <span className="text-sm text-blue-600 font-medium">Đã chọn {selectedExportIds.size} đơn</span>
+                  <button onClick={() => setSelectedExportIds(new Set())} className="text-xs text-gray-400 hover:text-gray-600 underline">Bỏ chọn</button>
+                </>
+              )}
+            </div>
+            <div className="flex gap-2 items-center">
+              <ColumnPicker cols={COLS_EXPORT} visible={visExport} onChange={setVisExport} />
+              {/* Nút tạo phiếu xuất — chỉ hiện khi có chọn đơn */}
+              {selectedExportIds.size > 0 && (
+                <div className="flex gap-1.5">
+                  <button onClick={() => setExportSlipMode('total')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700">
+                    <Printer size={13} /> Xuất tổng ({selectedExportIds.size})
+                  </button>
+                  <button onClick={() => setExportSlipMode('detail')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700">
+                    <Printer size={13} /> Xuất chi tiết ({selectedExportIds.size})
+                  </button>
+                </div>
+              )}
+              <button onClick={() => {
+                const vc = COLS_EXPORT.filter(c => visExport.has(c.key))
+                const src = selectedExportIds.size > 0 ? selectedExportOrders : filteredExportOrders
+                const rows = src.map((o: any) => vc.map(c => {
+                  switch (c.key) {
+                    case 'orderCode': return o.orderCode
+                    case 'customer': return o.customer?.name || 'Khách lẻ'
+                    case 'itemCount': return o.items?.length ?? 0
+                    case 'total': return o.total
+                    case 'paymentMethod': return PAY_LABEL[o.paymentMethod] || o.paymentMethod
+                    case 'user': return o.user?.name || ''
+                    case 'createdAt': return new Date(o.createdAt).toLocaleDateString('vi-VN')
+                    default: return ''
+                  }
+                }))
+                exportExcel(`Phieu-xuat_${from}_${to}`, 'Phieu xuat', vc.map(c => c.label), rows)
+              }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-medium hover:bg-green-700">
+                <FileSpreadsheet size={13} /> Excel
+              </button>
+              <button onClick={() => {
+                const vc = COLS_EXPORT.filter(c => visExport.has(c.key))
+                const src = selectedExportIds.size > 0 ? selectedExportOrders : filteredExportOrders
+                const rows = src.map((o: any) => vc.map(c => {
+                  switch (c.key) {
+                    case 'orderCode': return o.orderCode
+                    case 'customer': return o.customer?.name || 'Khách lẻ'
+                    case 'itemCount': return String(o.items?.length ?? 0)
+                    case 'total': return fmt(o.total)
+                    case 'paymentMethod': return PAY_LABEL[o.paymentMethod] || o.paymentMethod
+                    case 'user': return o.user?.name || ''
+                    case 'createdAt': return new Date(o.createdAt).toLocaleString('vi-VN')
+                    default: return ''
+                  }
+                }))
+                exportPDF(`Phieu-xuat_${from}_${to}`, 'Danh sach phieu xuat hang', fmtPeriod(from, to), vc.map(c => c.label), rows)
+              }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-medium hover:bg-red-700">
+                <FileText size={13} /> PDF
+              </button>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="px-3 py-3 w-10">
+                    <input type="checkbox" className="w-4 h-4 rounded cursor-pointer accent-blue-600"
+                      checked={filteredExportOrders.length > 0 && filteredExportOrders.every((o: any) => selectedExportIds.has(o.id))}
+                      onChange={e => {
+                        const ids = filteredExportOrders.map((o: any) => o.id)
+                        if (e.target.checked) setSelectedExportIds(prev => new Set([...prev, ...ids]))
+                        else setSelectedExportIds(prev => { const s = new Set(prev); ids.forEach((id: string) => s.delete(id)); return s })
+                      }}
+                    />
+                  </th>
+                  {COLS_EXPORT.filter(c => visExport.has(c.key)).map(c => (
+                    <th key={c.key} className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">{c.label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {filteredExportOrders.map((o: any) => (
+                  <tr key={o.id} className={`hover:bg-gray-50 ${selectedExportIds.has(o.id) ? 'bg-blue-50' : ''}`}>
+                    <td className="px-3 py-2">
+                      <input type="checkbox" className="w-4 h-4 rounded cursor-pointer accent-blue-600"
+                        checked={selectedExportIds.has(o.id)}
+                        onChange={e => setSelectedExportIds(prev => {
+                          const s = new Set(prev); e.target.checked ? s.add(o.id) : s.delete(o.id); return s
+                        })}
+                      />
+                    </td>
+                    {visExport.has('orderCode') && <td className="px-4 py-3 font-mono text-xs font-semibold text-blue-700">{o.orderCode}</td>}
+                    {visExport.has('customer') && (
+                      <td className="px-4 py-3">
+                        <p className="font-medium">{o.customer?.name || 'Khách lẻ'}</p>
+                        {o.customer?.phone && <p className="text-xs text-gray-400">{o.customer.phone}</p>}
+                      </td>
+                    )}
+                    {visExport.has('itemCount') && (
+                      <td className="px-4 py-3 text-gray-500">
+                        <span className="badge badge-blue">{o.items?.length ?? 0} SP</span>
+                      </td>
+                    )}
+                    {visExport.has('total') && <td className="px-4 py-3 font-semibold text-blue-600 whitespace-nowrap">{fmt(o.total)}</td>}
+                    {visExport.has('paymentMethod') && (
+                      <td className="px-4 py-3"><span className="badge badge-green">{PAY_LABEL[o.paymentMethod]}</span></td>
+                    )}
+                    {visExport.has('user') && <td className="px-4 py-3 text-gray-500">{o.user?.name}</td>}
+                    {visExport.has('createdAt') && <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{new Date(o.createdAt).toLocaleString('vi-VN')}</td>}
+                  </tr>
+                ))}
+                {!filteredExportOrders.length && (
+                  <tr><td colSpan={COLS_EXPORT.filter(c => visExport.has(c.key)).length + 1} className="text-center py-10 text-gray-400">
+                    {searchExport ? 'Không tìm thấy kết quả' : 'Chưa có đơn hàng hoàn thành trong khoảng thời gian này'}
+                  </td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          {filteredExportOrders.length > 0 && (
+            <div className="px-5 py-3 border-t text-sm text-gray-500 flex items-center justify-between">
+              <span>Tổng: <strong>{filteredExportOrders.length}</strong> đơn xuất · Giá trị: <strong className="text-blue-600">{fmt(filteredExportOrders.reduce((s: number, o: any) => s + o.total, 0))}</strong></span>
+              {selectedExportIds.size === 0 && (
+                <p className="text-xs text-gray-400 italic">Chọn các đơn để tạo phiếu xuất</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ==================== Modal Điều chỉnh kho ==================== */}
       {showAdjust && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
