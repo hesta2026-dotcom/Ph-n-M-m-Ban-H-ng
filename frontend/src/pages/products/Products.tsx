@@ -2,10 +2,23 @@ import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../../services/api'
 import toast from 'react-hot-toast'
-import { Plus, Search, Edit2, Trash2, ImagePlus, X, Package, Tag, Building2, Upload, Download, FileSpreadsheet, FolderPlus } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, ImagePlus, X, Package, Tag, Building2, Upload, Download, FileSpreadsheet, FileText, FolderPlus } from 'lucide-react'
 import NewCategoryModal from './NewCategoryModal'
+import ColumnPicker, { ColDef } from '../../components/ColumnPicker'
+import { exportExcel, exportPDF } from '../../utils/export'
 
 const fmt = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
+
+const COLS: ColDef[] = [
+  { key: 'image', label: 'Ảnh' },
+  { key: 'code', label: 'Mã SP' },
+  { key: 'name', label: 'Tên sản phẩm' },
+  { key: 'brandMfr', label: 'Thương hiệu / SX' },
+  { key: 'category', label: 'Danh mục' },
+  { key: 'price', label: 'Giá bán' },
+  { key: 'costPrice', label: 'Giá vốn' },
+  { key: 'stock', label: 'Tồn kho' },
+]
 
 const emptyForm = {
   name: '', code: '', barcode: '', price: 0, costPrice: 0,
@@ -34,6 +47,7 @@ export default function Products() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [inlineUploadId, setInlineUploadId] = useState<string | null>(null)
   const [showNewCategory, setShowNewCategory] = useState(false)
+  const [visible, setVisible] = useState<Set<string>>(() => new Set(COLS.map(c => c.key)))
   const fileRef = useRef<HTMLInputElement>(null)
   const importRef = useRef<HTMLInputElement>(null)
   const inlineRef = useRef<HTMLInputElement>(null)
@@ -54,6 +68,34 @@ export default function Products() {
       setInlineUploadId(null)
       if (inlineRef.current) inlineRef.current.value = ''
     }
+  }
+
+  const visCols = COLS.filter(c => visible.has(c.key))
+
+  const getProductVal = (p: any, key: string) => {
+    switch (key) {
+      case 'image': return p.image ? '[Ảnh]' : ''
+      case 'code': return p.code
+      case 'name': return p.name
+      case 'brandMfr': return [p.brand, p.manufacturer].filter(Boolean).join(' / ') || '-'
+      case 'category': return p.category?.name || '-'
+      case 'price': return p.price
+      case 'costPrice': return p.costPrice
+      case 'stock': return p.stock
+      default: return ''
+    }
+  }
+
+  const handleExportExcel = () => {
+    const rows = (data?.data || []).map((p: any) => visCols.map(c => getProductVal(p, c.key)))
+    exportExcel(`San-pham_${new Date().toISOString().slice(0, 10)}`, 'Sản phẩm', visCols.map(c => c.label), rows)
+  }
+
+  const handleExportPDF = () => {
+    const rows = (data?.data || []).map((p: any) => visCols.map(c =>
+      c.key === 'price' || c.key === 'costPrice' ? fmt(getProductVal(p, c.key) as number) : String(getProductVal(p, c.key))
+    ))
+    exportPDF(`San-pham_${new Date().toISOString().slice(0, 10)}`, 'Danh sách sản phẩm', '', visCols.map(c => c.label), rows)
   }
 
   const handleExport = async () => {
@@ -203,10 +245,17 @@ export default function Products() {
             className="btn-outline flex items-center gap-1.5 text-sm disabled:opacity-50">
             <Upload size={15} /> {importing ? 'Đang import...' : 'Import Excel'}
           </button>
+          <ColumnPicker cols={COLS} visible={visible} onChange={setVisible} />
+          <button onClick={handleExportExcel} className="flex items-center gap-1.5 text-sm btn-outline">
+            <FileSpreadsheet size={15} /> Excel
+          </button>
+          <button onClick={handleExportPDF} className="flex items-center gap-1.5 text-sm btn-outline">
+            <FileText size={15} /> PDF
+          </button>
           <button onClick={handleExport}
             className={`flex items-center gap-1.5 text-sm ${selectedIds.size > 0 ? 'btn-primary' : 'btn-outline'}`}>
             <Download size={15} />
-            {selectedIds.size > 0 ? `Xuất ${selectedIds.size} sản phẩm` : 'Xuất Excel'}
+            {selectedIds.size > 0 ? `Xuất ${selectedIds.size} sản phẩm` : 'Xuất đầy đủ'}
           </button>
           {selectedIds.size > 0 && (
             <button onClick={() => setSelectedIds(new Set())}
@@ -262,14 +311,15 @@ export default function Products() {
                     }}
                   />
                 </th>
-                {['Ảnh', 'Mã SP', 'Tên sản phẩm', 'Thương hiệu / SX', 'Danh mục', 'Giá bán', 'Giá vốn', 'Tồn kho', 'Thao tác'].map(h => (
-                  <th key={h} className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap">{h}</th>
+                {visCols.map(c => (
+                  <th key={c.key} className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap">{c.label}</th>
                 ))}
+                <th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y">
-              {isLoading && <tr><td colSpan={10} className="text-center py-10 text-gray-400">Đang tải...</td></tr>}
-              {!isLoading && !data?.data?.length && <tr><td colSpan={10} className="text-center py-10 text-gray-400">Không có sản phẩm nào</td></tr>}
+              {isLoading && <tr><td colSpan={visCols.length + 2} className="text-center py-10 text-gray-400">Đang tải...</td></tr>}
+              {!isLoading && !data?.data?.length && <tr><td colSpan={visCols.length + 2} className="text-center py-10 text-gray-400">Không có sản phẩm nào</td></tr>}
               {data?.data?.map((p: any) => {
                 const imgs: string[] = p.images ? JSON.parse(p.images) : []
                 const thumb = p.image || imgs[0]
@@ -289,7 +339,7 @@ export default function Products() {
                         }}
                       />
                     </td>
-                    <td className="px-3 py-2">
+                    {visible.has('image') && <td className="px-3 py-2">
                       <button
                         title="Click để tải ảnh lên"
                         onClick={() => { setInlineUploadId(p.id); inlineRef.current?.click() }}
@@ -303,22 +353,22 @@ export default function Products() {
                           <ImagePlus size={16} className="text-white" />
                         </div>
                       </button>
-                    </td>
-                    <td className="px-3 py-2 font-mono text-xs text-gray-500">{p.code}</td>
-                    <td className="px-3 py-2">
+                    </td>}
+                    {visible.has('code') && <td className="px-3 py-2 font-mono text-xs text-gray-500">{p.code}</td>}
+                    {visible.has('name') && <td className="px-3 py-2">
                       <p className="font-medium">{p.name}</p>
                       {p.specification && <p className="text-xs text-gray-400">{p.specification}</p>}
-                    </td>
-                    <td className="px-3 py-2">
+                    </td>}
+                    {visible.has('brandMfr') && <td className="px-3 py-2">
                       {p.brand && <p className="font-medium flex items-center gap-1"><Tag size={11} className="text-purple-400" />{p.brand}</p>}
                       {p.manufacturer && <p className="text-xs text-gray-400 flex items-center gap-1"><Building2 size={11} />{p.manufacturer}</p>}
-                    </td>
-                    <td className="px-3 py-2 text-gray-500">{p.category?.name || '-'}</td>
-                    <td className="px-3 py-2 text-blue-600 font-semibold whitespace-nowrap">{fmt(p.price)}</td>
-                    <td className="px-3 py-2 text-gray-500 whitespace-nowrap">{fmt(p.costPrice)}</td>
-                    <td className="px-3 py-2">
+                    </td>}
+                    {visible.has('category') && <td className="px-3 py-2 text-gray-500">{p.category?.name || '-'}</td>}
+                    {visible.has('price') && <td className="px-3 py-2 text-blue-600 font-semibold whitespace-nowrap">{fmt(p.price)}</td>}
+                    {visible.has('costPrice') && <td className="px-3 py-2 text-gray-500 whitespace-nowrap">{fmt(p.costPrice)}</td>}
+                    {visible.has('stock') && <td className="px-3 py-2">
                       <span className={`badge ${p.stock <= p.minStock ? 'badge-red' : 'badge-green'}`}>{p.stock} {p.unit}</span>
-                    </td>
+                    </td>}
                     <td className="px-3 py-2">
                       <div className="flex gap-2">
                         <button onClick={() => openEdit(p)} className="text-blue-500 hover:text-blue-700"><Edit2 size={15} /></button>

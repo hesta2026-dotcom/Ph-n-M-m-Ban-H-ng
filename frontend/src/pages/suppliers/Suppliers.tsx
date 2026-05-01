@@ -2,10 +2,20 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../../services/api'
 import toast from 'react-hot-toast'
-import { Plus, Search, Edit2, X, Package, ChevronRight } from 'lucide-react'
+import { Plus, Search, Edit2, X, Package, ChevronRight, FileSpreadsheet, FileText } from 'lucide-react'
+import ColumnPicker, { ColDef } from '../../components/ColumnPicker'
+import { exportExcel, exportPDF } from '../../utils/export'
 
 const fmt = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
 const emptyForm = { name: '', phone: '', email: '', address: '', taxCode: '' }
+
+const COLS: ColDef[] = [
+  { key: 'name', label: 'Tên NCC' },
+  { key: 'phone', label: 'SĐT' },
+  { key: 'email', label: 'Email' },
+  { key: 'taxCode', label: 'Mã số thuế' },
+  { key: 'debt', label: 'Công nợ' },
+]
 
 export default function Suppliers() {
   const [search, setSearch] = useState('')
@@ -14,6 +24,7 @@ export default function Suppliers() {
   const [form, setForm] = useState(emptyForm)
   const [viewSupplier, setViewSupplier] = useState<any>(null)
   const [viewPurchase, setViewPurchase] = useState<any>(null)
+  const [visible, setVisible] = useState<Set<string>>(() => new Set(COLS.map(c => c.key)))
   const qc = useQueryClient()
 
   const { data } = useQuery({
@@ -40,12 +51,46 @@ export default function Suppliers() {
   const totalPurchased = supplierPurchases?.data?.reduce((s: number, p: any) => s + p.total, 0) ?? 0
   const totalPaid     = supplierPurchases?.data?.reduce((s: number, p: any) => s + p.paid,  0) ?? 0
 
+  const visCols = COLS.filter(c => visible.has(c.key))
+
+  const getVal = (s: any, key: string) => {
+    switch (key) {
+      case 'name': return s.name
+      case 'phone': return s.phone || '-'
+      case 'email': return s.email || '-'
+      case 'taxCode': return s.taxCode || '-'
+      case 'debt': return s.debt
+      default: return ''
+    }
+  }
+
+  const handleExcelSuppliers = () => {
+    const rows = (data || []).map((s: any) => visCols.map(c => getVal(s, c.key)))
+    exportExcel(`Nha-cung-cap_${new Date().toISOString().slice(0, 10)}`, 'Nhà cung cấp', visCols.map(c => c.label), rows)
+  }
+
+  const handlePDFSuppliers = () => {
+    const rows = (data || []).map((s: any) => visCols.map(c =>
+      c.key === 'debt' ? fmt(s.debt) : String(getVal(s, c.key))
+    ))
+    exportPDF(`Nha-cung-cap_${new Date().toISOString().slice(0, 10)}`, 'Danh sách nhà cung cấp', '', visCols.map(c => c.label), rows)
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl font-bold">Nhà cung cấp</h1>
-        <button onClick={() => { setEditing(null); setForm(emptyForm); setShowForm(true) }}
-          className="btn-primary flex items-center gap-2"><Plus size={18} /> Thêm NCC</button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <ColumnPicker cols={COLS} visible={visible} onChange={setVisible} />
+          <button onClick={handleExcelSuppliers} className="flex items-center gap-1.5 text-sm btn-outline">
+            <FileSpreadsheet size={15} /> Excel
+          </button>
+          <button onClick={handlePDFSuppliers} className="flex items-center gap-1.5 text-sm btn-outline">
+            <FileText size={15} /> PDF
+          </button>
+          <button onClick={() => { setEditing(null); setForm(emptyForm); setShowForm(true) }}
+            className="btn-primary flex items-center gap-2"><Plus size={18} /> Thêm NCC</button>
+        </div>
       </div>
 
       <div className="relative">
@@ -57,27 +102,28 @@ export default function Suppliers() {
       <div className="card p-0 overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b">
-            <tr>{['Tên NCC', 'SĐT', 'Email', 'Mã số thuế', 'Công nợ', 'Thao tác'].map(h =>
-              <th key={h} className="px-4 py-3 text-left font-medium text-gray-600">{h}</th>)}
+            <tr>
+              {visCols.map(c => <th key={c.key} className="px-4 py-3 text-left font-medium text-gray-600">{c.label}</th>)}
+              <th className="px-4 py-3 text-left font-medium text-gray-600">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {data?.map((s: any) => (
               <tr key={s.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3">
+                {visible.has('name') && <td className="px-4 py-3">
                   <button onClick={() => setViewSupplier(s)}
                     className="font-medium text-left hover:text-blue-600 hover:underline flex items-center gap-1">
                     {s.name} <ChevronRight size={14} className="text-gray-400" />
                   </button>
-                </td>
-                <td className="px-4 py-3 text-gray-500">{s.phone || '-'}</td>
-                <td className="px-4 py-3 text-gray-500">{s.email || '-'}</td>
-                <td className="px-4 py-3 text-gray-500">{s.taxCode || '-'}</td>
-                <td className="px-4 py-3">
+                </td>}
+                {visible.has('phone') && <td className="px-4 py-3 text-gray-500">{s.phone || '-'}</td>}
+                {visible.has('email') && <td className="px-4 py-3 text-gray-500">{s.email || '-'}</td>}
+                {visible.has('taxCode') && <td className="px-4 py-3 text-gray-500">{s.taxCode || '-'}</td>}
+                {visible.has('debt') && <td className="px-4 py-3">
                   {s.debt > 0
                     ? <button onClick={() => setViewSupplier(s)} className="badge badge-red hover:opacity-80">{fmt(s.debt)}</button>
                     : <span className="text-gray-400">-</span>}
-                </td>
+                </td>}
                 <td className="px-4 py-3">
                   <button onClick={() => { setEditing(s); setForm({ name: s.name, phone: s.phone || '', email: s.email || '', address: s.address || '', taxCode: s.taxCode || '' }); setShowForm(true) }}
                     className="text-blue-500 hover:text-blue-700"><Edit2 size={15} /></button>
