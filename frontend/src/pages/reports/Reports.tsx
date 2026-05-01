@@ -187,12 +187,18 @@ export default function Reports() {
               </button>
             </div>
           </div>
+          <div className="px-5 py-2 bg-blue-50 border-b text-sm flex gap-6 flex-wrap">
+            <span className="text-gray-500">Tổng đơn: <strong className="text-gray-800">{revenue.length}</strong></span>
+            <span className="text-gray-500">Doanh thu: <strong className="text-green-600">{fmt(revenue.reduce((s: number, o: any) => s + o.total, 0))}</strong></span>
+            <span className="text-gray-500">Giảm giá: <strong className="text-red-500">{fmt(revenue.reduce((s: number, o: any) => s + (o.discount || 0), 0))}</strong></span>
+            <span className="text-gray-500">Tiền nhận: <strong className="text-blue-600">{fmt(revenue.reduce((s: number, o: any) => s + (o.amountPaid || 0), 0))}</strong></span>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
                   {visCols.map(c => (
-                    <th key={c.key} className="px-4 py-3 text-left font-medium text-gray-600">{c.label}</th>
+                    <th key={c.key} className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">{c.label}</th>
                   ))}
                 </tr>
               </thead>
