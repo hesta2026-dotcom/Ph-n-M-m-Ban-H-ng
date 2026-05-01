@@ -131,8 +131,12 @@ export default function Suppliers() {
                     : <span className="text-gray-400">-</span>}
                 </td>}
                 <td className="px-4 py-3">
-                  <button onClick={() => { setEditing(s); setForm({ name: s.name, phone: s.phone || '', email: s.email || '', address: s.address || '', taxCode: s.taxCode || '' }); setShowForm(true) }}
-                    className="text-blue-500 hover:text-blue-700"><Edit2 size={15} /></button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => { setEditing(s); setForm({ name: s.name, phone: s.phone || '', email: s.email || '', address: s.address || '', taxCode: s.taxCode || '' }); setShowForm(true) }}
+                      className="text-blue-500 hover:text-blue-700"><Edit2 size={15} /></button>
+                    <button onClick={() => { if (confirm(`Xóa nhà cung cấp "${s.name}"?`)) del.mutate(s.id) }}
+                      className="text-red-400 hover:text-red-600"><Trash2 size={15} /></button>
+                  </div>
                 </td>
               </tr>
             ))}
