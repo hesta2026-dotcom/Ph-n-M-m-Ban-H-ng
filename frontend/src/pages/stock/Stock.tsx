@@ -219,6 +219,32 @@ export default function Stock() {
       (p.supplier?.name || '').toLowerCase().includes(q)
   })
 
+  const filteredExportOrders = (exportOrders?.data || []).filter((o: any) => {
+    if (!searchExport) return true
+    const q = searchExport.toLowerCase()
+    return o.orderCode.toLowerCase().includes(q) ||
+      (o.customer?.name || '').toLowerCase().includes(q) ||
+      (o.customer?.phone || '').toLowerCase().includes(q) ||
+      (o.user?.name || '').toLowerCase().includes(q)
+  })
+
+  const selectedExportOrders = filteredExportOrders.filter((o: any) => selectedExportIds.has(o.id))
+
+  const mergedItemsForTotal = (() => {
+    const map = new Map<string, { product: any; qty: number; price: number }>()
+    selectedExportOrders.forEach((o: any) => {
+      o.items?.forEach((item: any) => {
+        const key = item.productId
+        if (map.has(key)) {
+          map.get(key)!.qty += item.qty
+        } else {
+          map.set(key, { product: item.product, qty: item.qty, price: item.price })
+        }
+      })
+    })
+    return Array.from(map.values())
+  })()
+
   const exportLogs = selectedLogIds.size > 0
     ? filteredLogs.filter((l: any) => selectedLogIds.has(l.id))
     : filteredLogs
