@@ -26,4 +26,11 @@ router.put('/:id', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    await prisma.supplier.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Đã xóa' });
+  } catch (e) { res.status(400).json({ message: 'Không thể xóa nhà cung cấp đang có phiếu nhập' }); }
+});
+
 module.exports = router;
