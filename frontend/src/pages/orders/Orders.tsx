@@ -180,6 +180,17 @@ export default function Orders() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
+                <th className="px-3 py-3 w-10">
+                  <input type="checkbox"
+                    className="w-4 h-4 rounded cursor-pointer accent-blue-600"
+                    checked={data?.data?.length > 0 && data.data.every((o: any) => selectedIds.has(o.id))}
+                    onChange={e => {
+                      const ids = data?.data?.map((o: any) => o.id) ?? []
+                      if (e.target.checked) setSelectedIds(prev => new Set([...prev, ...ids]))
+                      else setSelectedIds(prev => { const s = new Set(prev); ids.forEach((id: string) => s.delete(id)); return s })
+                    }}
+                  />
+                </th>
                 {visCols.map(c => (
                   <th key={c.key} className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">{c.label}</th>
                 ))}
@@ -187,10 +198,10 @@ export default function Orders() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {isLoading && <tr><td colSpan={visCols.length + 1} className="text-center py-10 text-gray-400">Đang tải...</td></tr>}
-              {!isLoading && !data?.data?.length && <tr><td colSpan={visCols.length + 1} className="text-center py-10 text-gray-400">Không có đơn hàng nào</td></tr>}
+              {isLoading && <tr><td colSpan={visCols.length + 2} className="text-center py-10 text-gray-400">Đang tải...</td></tr>}
+              {!isLoading && !data?.data?.length && <tr><td colSpan={visCols.length + 2} className="text-center py-10 text-gray-400">Không có đơn hàng nào</td></tr>}
               {data?.data?.map((o: any) => (
-                <tr key={o.id} className="hover:bg-gray-50">
+                <tr key={o.id} className={`hover:bg-gray-50 ${selectedIds.has(o.id) ? 'bg-blue-50' : ''}`}>
                   {visible.has('orderCode') && <td className="px-4 py-3 font-mono text-xs font-semibold text-blue-700">{o.orderCode}</td>}
                   {visible.has('customer') && (
                     <td className="px-4 py-3">
