@@ -407,13 +407,26 @@ export default function Stock() {
       {tab === 'logs' && (
         <div className="card p-0 overflow-hidden">
           <div className="px-5 py-3 border-b flex items-center justify-between flex-wrap gap-2">
-            <span className="text-sm font-medium text-gray-600">Lịch sử xuất nhập kho</span>
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-sm font-medium text-gray-600">Lịch sử xuất nhập kho</span>
+              <div className="relative">
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input className="input pl-8 py-1.5 text-sm w-56"
+                  placeholder="Tìm sản phẩm, mã, ghi chú..."
+                  value={searchLogs} onChange={e => { setSearchLogs(e.target.value); setSelectedLogIds(new Set()) }} />
+              </div>
+              {selectedLogIds.size > 0 && (
+                <>
+                  <span className="text-sm text-blue-600 font-medium">Đã chọn {selectedLogIds.size}</span>
+                  <button onClick={() => setSelectedLogIds(new Set())} className="text-xs text-gray-400 hover:text-gray-600 underline">Bỏ chọn</button>
+                </>
+              )}
+            </div>
             <div className="flex gap-2 items-center">
               <ColumnPicker cols={COLS_LOGS} visible={visLogs} onChange={setVisLogs} />
               <button onClick={() => {
                 const vc = COLS_LOGS.filter(c => visLogs.has(c.key))
-                const headers = vc.map(c => c.label)
-                const rows = (logs || []).map((l: any) => vc.map(c => {
+                const rows = exportLogs.map((l: any) => vc.map(c => {
                   switch (c.key) {
                     case 'product': return l.product?.name || ''
                     case 'type': return logTypeLabel[l.type] || l.type
@@ -425,14 +438,13 @@ export default function Stock() {
                     default: return ''
                   }
                 }))
-                exportExcel(`Lich-su-kho_${from}_${to}`, 'Lich su kho', headers, rows)
-              }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-medium hover:bg-green-700">
-                <FileSpreadsheet size={13} /> Excel
+                exportExcel(`Lich-su-kho_${from}_${to}`, 'Lich su kho', vc.map(c => c.label), rows)
+              }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium ${selectedLogIds.size > 0 ? 'bg-green-700' : 'bg-green-600 hover:bg-green-700'}`}>
+                <FileSpreadsheet size={13} /> {selectedLogIds.size > 0 ? `Excel (${selectedLogIds.size})` : 'Excel'}
               </button>
               <button onClick={() => {
                 const vc = COLS_LOGS.filter(c => visLogs.has(c.key))
-                const headers = vc.map(c => c.label)
-                const rows = (logs || []).map((l: any) => vc.map(c => {
+                const rows = exportLogs.map((l: any) => vc.map(c => {
                   switch (c.key) {
                     case 'product': return l.product?.name || ''
                     case 'type': return logTypeLabel[l.type] || l.type
@@ -444,9 +456,9 @@ export default function Stock() {
                     default: return ''
                   }
                 }))
-                exportPDF(`Lich-su-kho_${from}_${to}`, 'Lich su xuat nhap kho', fmtPeriod(from, to), headers, rows)
-              }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-medium hover:bg-red-700">
-                <FileText size={13} /> PDF
+                exportPDF(`Lich-su-kho_${from}_${to}`, 'Lich su xuat nhap kho', fmtPeriod(from, to), vc.map(c => c.label), rows)
+              }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium ${selectedLogIds.size > 0 ? 'bg-red-700' : 'bg-red-600 hover:bg-red-700'}`}>
+                <FileText size={13} /> {selectedLogIds.size > 0 ? `PDF (${selectedLogIds.size})` : 'PDF'}
               </button>
             </div>
           </div>
@@ -454,14 +466,32 @@ export default function Stock() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b">
                 <tr>
+                  <th className="px-3 py-3 w-10">
+                    <input type="checkbox" className="w-4 h-4 rounded cursor-pointer accent-blue-600"
+                      checked={filteredLogs.length > 0 && filteredLogs.every((l: any) => selectedLogIds.has(l.id))}
+                      onChange={e => {
+                        const ids = filteredLogs.map((l: any) => l.id)
+                        if (e.target.checked) setSelectedLogIds(prev => new Set([...prev, ...ids]))
+                        else setSelectedLogIds(prev => { const s = new Set(prev); ids.forEach((id: string) => s.delete(id)); return s })
+                      }}
+                    />
+                  </th>
                   {COLS_LOGS.filter(c => visLogs.has(c.key)).map(c => (
                     <th key={c.key} className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">{c.label}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {logs?.map((l: any) => (
-                  <tr key={l.id} className="hover:bg-gray-50">
+                {filteredLogs.map((l: any) => (
+                  <tr key={l.id} className={`hover:bg-gray-50 ${selectedLogIds.has(l.id) ? 'bg-blue-50' : ''}`}>
+                    <td className="px-3 py-2">
+                      <input type="checkbox" className="w-4 h-4 rounded cursor-pointer accent-blue-600"
+                        checked={selectedLogIds.has(l.id)}
+                        onChange={e => setSelectedLogIds(prev => {
+                          const s = new Set(prev); e.target.checked ? s.add(l.id) : s.delete(l.id); return s
+                        })}
+                      />
+                    </td>
                     {visLogs.has('product') && (
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
@@ -484,7 +514,11 @@ export default function Stock() {
                     {visLogs.has('createdAt') && <td className="px-4 py-3 text-gray-400 whitespace-nowrap text-xs">{new Date(l.createdAt).toLocaleString('vi-VN')}</td>}
                   </tr>
                 ))}
-                {!logs?.length && <tr><td colSpan={COLS_LOGS.filter(c => visLogs.has(c.key)).length} className="text-center py-10 text-gray-400">Chưa có lịch sử</td></tr>}
+                {!filteredLogs.length && (
+                  <tr><td colSpan={COLS_LOGS.filter(c => visLogs.has(c.key)).length + 1} className="text-center py-10 text-gray-400">
+                    {searchLogs ? 'Không tìm thấy kết quả' : 'Chưa có lịch sử'}
+                  </td></tr>
+                )}
               </tbody>
             </table>
           </div>
