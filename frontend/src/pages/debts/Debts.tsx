@@ -167,9 +167,33 @@ export default function Debts() {
   })
 
   const selectedDebts = filteredData.filter((d: any) => selectedIds.has(d.id))
-  const selectedTotal = selectedDebts.reduce((s: number, d: any) => s + (payAmount[d.id] || 0), 0)
-  const toggleSelect = (id: string) => setSelectedIds(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
-  const toggleAll = (checked: boolean) => setSelectedIds(checked ? new Set(filteredData.map((d: any) => d.id)) : new Set())
+  const selectedAmountTotal = selectedDebts.reduce((s: number, d: any) => s + d.amount, 0)
+  const selectedRemainingTotal = selectedDebts.reduce((s: number, d: any) => s + d.remaining, 0)
+  const selectedPayTotal = selectedDebts.reduce((s: number, d: any) => s + (payAmount[d.id] || 0), 0)
+
+  const toggleSelect = (id: string, debt?: any) => {
+    setSelectedIds(prev => {
+      const s = new Set(prev)
+      if (s.has(id)) {
+        s.delete(id)
+      } else {
+        s.add(id)
+        if (debt && debt.remaining > 0) {
+          setPayAmount(p => ({ ...p, [id]: debt.remaining }))
+        }
+      }
+      return s
+    })
+  }
+
+  const toggleAll = (checked: boolean) => {
+    setSelectedIds(checked ? new Set(filteredData.map((d: any) => d.id)) : new Set())
+    if (checked) {
+      const amounts: { [id: string]: number } = {}
+      filteredData.forEach((d: any) => { if (d.remaining > 0) amounts[d.id] = d.remaining })
+      setPayAmount(p => ({ ...p, ...amounts }))
+    }
+  }
 
   return (
     <div className="space-y-4">
