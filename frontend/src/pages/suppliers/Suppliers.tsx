@@ -48,6 +48,12 @@ export default function Suppliers() {
     onError: (e: any) => toast.error(e.response?.data?.message || 'Lỗi')
   })
 
+  const del = useMutation({
+    mutationFn: (id: string) => api.delete(`/suppliers/${id}`),
+    onSuccess: () => { toast.success('Đã xóa nhà cung cấp'); qc.invalidateQueries({ queryKey: ['suppliers'] }) },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Không thể xóa')
+  })
+
   const totalPurchased = supplierPurchases?.data?.reduce((s: number, p: any) => s + p.total, 0) ?? 0
   const totalPaid     = supplierPurchases?.data?.reduce((s: number, p: any) => s + p.paid,  0) ?? 0
 
