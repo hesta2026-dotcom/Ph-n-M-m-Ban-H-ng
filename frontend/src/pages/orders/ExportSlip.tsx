@@ -6,7 +6,7 @@ const payLabel: any = { CASH: 'Tiền mặt', CARD: 'Thẻ ngân hàng', TRANSFE
 
 interface Props { order: any; onClose: () => void; onPrint?: () => void }
 
-export default function ExportSlip({ order, onClose }: Props) {
+export default function ExportSlip({ order, onClose, onPrint }: Props) {
   const slipRef = useRef<HTMLDivElement>(null)
 
   const handlePrint = () => {
