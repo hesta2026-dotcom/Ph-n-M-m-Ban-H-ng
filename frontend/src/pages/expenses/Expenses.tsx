@@ -171,13 +171,22 @@ export default function Expenses() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b">
             <tr>
+              <th className="px-3 py-3 w-10">
+                <input type="checkbox" className="w-4 h-4 rounded cursor-pointer accent-blue-600"
+                  checked={data?.data?.length > 0 && data.data.every((e: any) => selectedIds.has(e.id))}
+                  onChange={ev => {
+                    const ids = data?.data?.map((e: any) => e.id) ?? []
+                    if (ev.target.checked) setSelectedIds(prev => new Set([...prev, ...ids]))
+                    else setSelectedIds(prev => { const s = new Set(prev); ids.forEach((id: string) => s.delete(id)); return s })
+                  }} />
+              </th>
               {visCols.map(c => <th key={c.key} className="px-4 py-3 text-left font-medium text-gray-600">{c.label}</th>)}
               <th className="px-4 py-3 text-left font-medium text-gray-600">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {data?.data?.map((e: any) => (
-              <tr key={e.id} className="hover:bg-gray-50">
+              <tr key={e.id} className={`hover:bg-gray-50 ${selectedIds.has(e.id) ? 'bg-blue-50' : ''}`}>
                 {visible.has('type') && <td className="px-4 py-3"><span className={`badge ${e.type === 'INCOME' ? 'badge-green' : 'badge-red'}`}>{e.type === 'INCOME' ? 'Thu' : 'Chi'}</span></td>}
                 {visible.has('category') && <td className="px-4 py-3">{e.category}</td>}
                 {visible.has('amount') && <td className={`px-4 py-3 font-semibold ${e.type === 'INCOME' ? 'text-green-600' : 'text-red-600'}`}>{fmt(e.amount)}</td>}
