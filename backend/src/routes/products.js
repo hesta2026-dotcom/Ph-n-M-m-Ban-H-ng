@@ -42,20 +42,52 @@ router.post('/upload-images', auth, upload.array('images', 5), (req, res) => {
 // ── Tải file mẫu Excel ──
 router.get('/template', auth, (req, res) => {
   const headers = [
-    'Tên sản phẩm *', 'Mã sản phẩm *', 'Barcode', 'Đơn vị tính',
-    'Giá bán *', 'Giá vốn', 'Tồn kho ban đầu', 'Tồn kho tối thiểu',
-    'Thương hiệu', 'Công ty sản xuất', 'Quy cách đóng gói',
+    'Tên sản phẩm *', 'Mã sản phẩm *', 'Barcode',
+    'ĐVT lẻ *', 'ĐVT thùng/hộp', 'SL lẻ/thùng',
+    'Giá bán (lẻ) *', 'Giá vốn (lẻ)',
+    'Tồn kho (thùng)', 'Tồn kho (lẻ)', 'Tồn kho tối thiểu',
+    'Thương hiệu', 'Nhà sản xuất',
     'Danh mục (tên)', 'Nhà cung cấp (tên)', 'Mô tả'
   ];
-  const example = [
-    'Sản phẩm mẫu', 'SP001', '8934000000001', 'cái',
-    50000, 30000, 100, 5,
-    'Samsung', 'Samsung Electronics', '1 hộp / 12 cái',
-    'Hàng hóa chính', 'NCC Mặc định', 'Mô tả sản phẩm'
+  const ex1 = [
+    'Nước ngọt A', 'NNA001', '8934000000001',
+    'chai', 'thùng', 24,
+    8000, 5500,
+    2, 6, 10,
+    '', '', 'Nước uống', '', ''
+  ];
+  const ex2 = [
+    'Sữa hộp B', 'SHB002', '8936000000002',
+    'hộp', 'thùng', 48,
+    12000, 8000,
+    1, 10, 12,
+    'Vinamilk', 'Vinamilk Corp', 'Sữa & Sản phẩm', '', ''
+  ];
+  const ex3 = [
+    'Đường tinh luyện', 'DTL003', '',
+    'kg', 'bao', 50,
+    25000, 18000,
+    0, 30, 5,
+    '', '', 'Thực phẩm', '', ''
+  ];
+  const note = [
+    '--- HƯỚNG DẪN ---',
+    '• ĐVT lẻ: đơn vị nhỏ nhất (chai, cái, kg, hộp...)',
+    '• ĐVT thùng/hộp: để TRỐNG nếu không bán theo thùng',
+    '• SL lẻ/thùng: số lượng lẻ trong 1 thùng (vd: 24)',
+    '• Tồn kho (thùng) + Tồn kho (lẻ) → tự tính tổng',
+    '• Ví dụ: 2 thùng × 24 + 6 lẻ = 54 chai tồn kho',
+    '', '', '', '', '', '', '', '', '', ''
   ];
   const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet([headers, example]);
-  ws['!cols'] = headers.map(() => ({ wch: 22 }));
+  const ws = XLSX.utils.aoa_to_sheet([headers, ex1, ex2, ex3, [], note]);
+  ws['!cols'] = headers.map((_, i) => ({ wch: i < 3 ? 24 : 18 }));
+  // Tô màu header
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let c = range.s.c; c <= range.e.c; c++) {
+    const cell = ws[XLSX.utils.encode_cell({ r: 0, c })];
+    if (cell) cell.s = { fill: { fgColor: { rgb: '1E40AF' } }, font: { bold: true, color: { rgb: 'FFFFFF' } } };
+  }
   XLSX.utils.book_append_sheet(wb, ws, 'Sản phẩm');
   const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
   res.setHeader('Content-Disposition', 'attachment; filename="mau_san_pham.xlsx"');
