@@ -340,7 +340,7 @@ export default function Debts() {
                 <td className="px-3 py-2">
                   <input type="checkbox" className="w-4 h-4 rounded cursor-pointer accent-blue-600"
                     checked={selectedIds.has(d.id)}
-                    onChange={() => toggleSelect(d.id)} />
+                    onChange={() => toggleSelect(d.id, d)} />
                 </td>
                 {visible.has('party') && <td className="px-4 py-3 font-medium">{d.customer?.name || d.supplier?.name || '-'}</td>}
                 {visible.has('note') && <td className="px-4 py-3 text-gray-400 text-xs max-w-[160px] truncate">{d.note || '-'}</td>}
