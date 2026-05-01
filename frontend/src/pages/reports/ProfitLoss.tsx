@@ -194,15 +194,21 @@ export default function ProfitLoss() {
             <h2 className="font-semibold text-gray-800 mb-4">Bảng kết quả kinh doanh</h2>
             <div className="space-y-2 text-sm">
               {[
-                { label: 'Doanh thu bán hàng', value: d.revenue, bold: false, indent: false },
-                { label: 'Giá vốn hàng bán', value: -d.cogs, bold: false, indent: true },
-                { label: 'Lợi nhuận gộp', value: d.grossProfit, bold: true, indent: false, border: true },
-                { label: 'Thu nhập khác', value: d.otherIncome, bold: false, indent: true },
-                { label: 'Chi phí hoạt động', value: -d.expenses, bold: false, indent: true },
-                { label: 'Lợi nhuận ròng', value: d.netProfit, bold: true, indent: false, border: true, highlight: true },
+                { label: 'Doanh thu bán hàng', value: d.revenue, bold: false, indent: false, type: 'revenue' as const },
+                { label: 'Giá vốn hàng bán', value: -d.cogs, bold: false, indent: true, type: 'cogs' as const },
+                { label: 'Lợi nhuận gộp', value: d.grossProfit, bold: true, indent: false, border: true, type: null },
+                { label: 'Thu nhập khác', value: d.otherIncome, bold: false, indent: true, type: 'income' as const },
+                { label: 'Chi phí hoạt động', value: -d.expenses, bold: false, indent: true, type: 'expenses' as const },
+                { label: 'Lợi nhuận ròng', value: d.netProfit, bold: true, indent: false, border: true, highlight: true, type: null },
               ].map(row => (
-                <div key={row.label} className={`flex justify-between items-center py-2 ${row.border ? 'border-t border-gray-200 mt-1' : ''} ${row.highlight ? 'bg-gray-50 rounded-lg px-3 -mx-3' : row.indent ? 'pl-6 text-gray-500' : ''}`}>
-                  <span className={row.bold ? 'font-semibold text-gray-900' : ''}>{row.label}</span>
+                <div
+                  key={row.label}
+                  onClick={() => row.type && setDetailType(row.type)}
+                  className={`flex justify-between items-center py-2 ${row.border ? 'border-t border-gray-200 mt-1' : ''} ${row.highlight ? 'bg-gray-50 rounded-lg px-3 -mx-3' : row.indent ? 'pl-6 text-gray-500' : ''} ${row.type ? 'cursor-pointer hover:bg-blue-50/60 rounded-lg px-2 -mx-2 transition-colors group' : ''}`}>
+                  <span className={`${row.bold ? 'font-semibold text-gray-900' : ''} flex items-center gap-1.5`}>
+                    {row.label}
+                    {row.type && <ExternalLink size={12} className="text-gray-300 group-hover:text-blue-400 transition-colors" />}
+                  </span>
                   <span className={`font-${row.bold ? 'bold' : 'medium'} ${row.value >= 0 ? 'text-gray-900' : 'text-red-600'}`}>
                     {row.value < 0 ? `(${fmt(Math.abs(row.value))})` : fmt(row.value)}
                   </span>
