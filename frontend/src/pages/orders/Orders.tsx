@@ -76,6 +76,12 @@ export default function Orders() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['orders'] }),
   })
 
+  const { mutate: delOrder } = useMutation({
+    mutationFn: (id: string) => api.delete(`/orders/${id}`),
+    onSuccess: () => { toast.success('Đã xóa đơn hàng'); qc.invalidateQueries({ queryKey: ['orders'] }) },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Không thể xóa')
+  })
+
   const confirmTransition = (order: any, next: string) => {
     const msg: any = {
       COMPLETED: `Xác nhận hoàn thành đơn ${order.orderCode}? Kho sẽ được trừ hàng.`,
