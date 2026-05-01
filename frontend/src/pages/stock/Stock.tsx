@@ -837,6 +837,13 @@ export default function Stock() {
                         {o.customer?.phone && <p className="text-xs text-gray-400">{o.customer.phone}</p>}
                       </td>
                     )}
+                    {visExport.has('orderStatus') && (
+                      <td className="px-4 py-3">
+                        <span className={`badge ${o.status === 'COMPLETED' ? 'badge-green' : 'badge-yellow'}`}>
+                          {o.status === 'COMPLETED' ? 'Hoàn thành' : 'Chờ xử lý'}
+                        </span>
+                      </td>
+                    )}
                     {visExport.has('itemCount') && (
                       <td className="px-4 py-3 text-gray-500">
                         <span className="badge badge-blue">{o.items?.length ?? 0} SP</span>
