@@ -159,6 +159,11 @@ export default function Customers() {
             {!isLoading && !data?.data?.length && <tr><td colSpan={visCols.length + 2} className="text-center py-10 text-gray-400">Không có khách hàng</td></tr>}
             {data?.data?.map((c: any) => (
               <tr key={c.id} className={`hover:bg-gray-50 ${selectedIds.has(c.id) ? 'bg-blue-50' : ''}`}>
+                <td className="px-3 py-3">
+                  <input type="checkbox" className="w-4 h-4 rounded cursor-pointer accent-blue-600"
+                    checked={selectedIds.has(c.id)}
+                    onChange={e => setSelectedIds(prev => { const s = new Set(prev); e.target.checked ? s.add(c.id) : s.delete(c.id); return s })} />
+                </td>
                 {visible.has('name') && (
                   <td className="px-4 py-3">
                     <button onClick={() => setViewCustomer(c)} className="font-medium text-blue-700 hover:text-blue-900 flex items-center gap-1 whitespace-nowrap">
