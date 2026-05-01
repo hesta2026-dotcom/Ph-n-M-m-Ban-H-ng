@@ -140,7 +140,6 @@ router.post('/import', auth, xlsxUpload.single('file'), async (req, res) => {
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
     if (rows.length < 2) return res.status(400).json({ message: 'File không có dữ liệu' });
 
-    // Load danh mục và NCC để map tên → id
     const [categories, suppliers] = await Promise.all([
       prisma.category.findMany(),
       prisma.supplier.findMany()
@@ -152,9 +151,20 @@ router.post('/import', auth, xlsxUpload.single('file'), async (req, res) => {
     for (let i = 1; i < rows.length; i++) {
       const r = rows[i];
       if (!r || !r[0] || !r[1]) { skipped++; continue; }
-      const [name, code, barcode, unit, price, costPrice, stock, minStock,
-             brand, manufacturer, specification, catName, supName, description] = r;
+
+      // Cột mới: Tên | Mã | Barcode | ĐVT lẻ | ĐVT thùng | SL/thùng | Giá bán | Giá vốn | Tồn thùng | Tồn lẻ | Tối thiểu | Thương hiệu | NX | Danh mục | NCC | Mô tả
+      const [name, code, barcode, unit, packageUnit, packageQty,
+             price, costPrice, stockThung, stockLe, minStock,
+             brand, manufacturer, catName, supName, description] = r;
+
       if (!name || !code || !price) { skipped++; continue; }
+
+      // Tính tổng tồn kho: thùng × SL/thùng + lẻ
+      const pQty = packageQty ? +packageQty : 0;
+      const sThung = stockThung ? +stockThung : 0;
+      const sLe = stockLe ? +stockLe : 0;
+      const totalStock = pQty > 0 ? (sThung * pQty + sLe) : (sThung + sLe);
+
       try {
         const existing = await prisma.product.findFirst({ where: { code: String(code) } });
         if (existing) { skipped++; errors.push(`Dòng ${i + 1}: Mã "${code}" đã tồn tại`); continue; }
@@ -165,11 +175,12 @@ router.post('/import', auth, xlsxUpload.single('file'), async (req, res) => {
             name: String(name), code: String(code),
             barcode: barcode ? String(barcode) : null,
             unit: unit ? String(unit) : 'cái',
+            packageUnit: packageUnit ? String(packageUnit) : null,
+            packageQty: pQty > 0 ? pQty : null,
             price: +price || 0, costPrice: +(costPrice || 0),
-            stock: +(stock || 0), minStock: +(minStock || 5),
+            stock: totalStock, minStock: +(minStock || 5),
             brand: brand ? String(brand) : null,
             manufacturer: manufacturer ? String(manufacturer) : null,
-            specification: specification ? String(specification) : null,
             categoryId, supplierId,
             description: description ? String(description) : null
           }
