@@ -59,6 +59,18 @@ export default function ProfitLoss() {
     queryFn: () => api.get(`/reports/profit-loss?from=${from}&to=${to}`).then(r => r.data)
   })
 
+  const { data: detailOrders, isLoading: loadingOrders } = useQuery({
+    queryKey: ['pl-orders', from, to],
+    queryFn: () => api.get(`/orders?status=COMPLETED&from=${from}&to=${to}&limit=500`).then(r => r.data),
+    enabled: detailType === 'revenue' || detailType === 'cogs'
+  })
+
+  const { data: detailExpenses, isLoading: loadingExpenses } = useQuery({
+    queryKey: ['pl-expenses', from, to],
+    queryFn: () => api.get(`/expenses?from=${from}&to=${to}&limit=500`).then(r => r.data),
+    enabled: detailType === 'expenses' || detailType === 'income'
+  })
+
   const d = data || { revenue: 0, cogs: 0, grossProfit: 0, expenses: 0, otherIncome: 0, netProfit: 0, grossMargin: 0, netMargin: 0, daily: [] }
 
   const chartData = {
