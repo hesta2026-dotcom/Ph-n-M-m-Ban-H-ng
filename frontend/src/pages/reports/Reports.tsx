@@ -16,8 +16,10 @@ const COLS_REVENUE: ColDef[] = [
 ]
 
 export default function Reports() {
-  const [from, setFrom] = useState(new Date(new Date().setDate(1)).toISOString().slice(0, 10))
-  const [to, setTo] = useState(new Date().toISOString().slice(0, 10))
+  const _now = new Date()
+  const _ld = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const [from, setFrom] = useState(_ld(new Date(_now.getFullYear(), _now.getMonth(), 1)))
+  const [to, setTo] = useState(_ld(_now))
   const [activePreset, setActivePreset] = useState('Tháng này')
   const [visible, setVisible] = useState<Set<string>>(() => new Set(COLS_REVENUE.map(c => c.key)))
 
