@@ -47,6 +47,7 @@ export default function Orders() {
   const [slipOrder, setSlipOrder] = useState<any>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [visible, setVisible] = useState<Set<string>>(() => new Set(COLS.map(c => c.key)))
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   const applyPreset = (p: typeof PRESETS[number]) => {
     const [f, t] = p.getDates(); setFrom(f); setTo(t); setActivePreset(p.label); setPage(1)
