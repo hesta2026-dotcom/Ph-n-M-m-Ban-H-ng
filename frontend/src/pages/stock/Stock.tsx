@@ -1,14 +1,15 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../../services/api'
 import toast from 'react-hot-toast'
-import { AlertTriangle, Plus, Package, Tag, Building2, X, PackagePlus, FileSpreadsheet, FileText, Search } from 'lucide-react'
+import { AlertTriangle, Plus, Package, Tag, Building2, X, PackagePlus, FileSpreadsheet, FileText, Search, Printer, ChevronDown } from 'lucide-react'
 import { exportExcel, exportPDF, PRESETS, fmtPeriod } from '../../utils/export'
 import NewProductModal from '../products/NewProductModal'
 import NewSupplierModal from '../suppliers/NewSupplierModal'
 import ColumnPicker, { ColDef } from '../../components/ColumnPicker'
 
 const fmt = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
+const PAY_LABEL: any = { CASH: 'Tiền mặt', CARD: 'Thẻ ngân hàng', TRANSFER: 'Chuyển khoản', DEBT: 'Ghi nợ', MIXED: 'Hỗn hợp' }
 
 const COLS_LOW: ColDef[] = [
   { key: 'product', label: 'Sản phẩm' },
