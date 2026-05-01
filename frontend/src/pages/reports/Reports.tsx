@@ -60,9 +60,16 @@ export default function Reports() {
     switch (key) {
       case 'orderCode': return o.orderCode
       case 'customer': return o.customer?.name || 'Khách lẻ'
+      case 'phone': return o.customer?.phone || '—'
+      case 'staff': return o.user?.name || '—'
       case 'channel': return channelLabel[o.channel] || o.channel
+      case 'paymentMethod': return PAY_LABEL[o.paymentMethod] || o.paymentMethod
+      case 'items': return (o.items || []).map((i: any) => `${i.product?.name} x${i.qty}`).join(', ')
+      case 'subtotal': return o.subtotal
+      case 'discount': return o.discount || 0
       case 'total': return o.total
-      case 'createdAt': return new Date(o.createdAt).toLocaleDateString('vi-VN')
+      case 'amountPaid': return o.amountPaid || 0
+      case 'createdAt': return new Date(o.createdAt).toLocaleString('vi-VN')
       default: return ''
     }
   }
