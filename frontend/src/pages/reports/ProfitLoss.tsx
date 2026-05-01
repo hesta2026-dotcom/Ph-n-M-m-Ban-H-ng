@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend } from 'chart.js'
 import { Bar } from 'react-chartjs-2'
 import api from '../../services/api'
-import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, Activity, Percent, FileSpreadsheet, FileText } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, Activity, Percent, FileSpreadsheet, FileText, X, ExternalLink } from 'lucide-react'
 import { exportExcel, exportPDF, PRESETS, fmtPeriod } from '../../utils/export'
 import ColumnPicker, { ColDef } from '../../components/ColumnPicker'
 
