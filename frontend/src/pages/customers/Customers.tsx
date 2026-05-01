@@ -55,6 +55,12 @@ export default function Customers() {
     onError: (e: any) => toast.error(e.response?.data?.message || 'Lỗi')
   })
 
+  const del = useMutation({
+    mutationFn: (id: string) => api.delete(`/customers/${id}`),
+    onSuccess: () => { toast.success('Đã xóa khách hàng'); qc.invalidateQueries({ queryKey: ['customers'] }) },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Không thể xóa')
+  })
+
   const totalOrderCount = customerOrders?.length ?? 0
   const totalSpent = customerOrders?.filter((o: any) => o.status === 'COMPLETED').reduce((s: number, o: any) => s + o.total, 0) ?? 0
 
