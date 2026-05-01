@@ -280,10 +280,40 @@ export default function Debts() {
       </div>
 
       <div className="card p-0 overflow-hidden">
-        {filteredData.length > 0 && (
-          <div className="px-4 py-2 border-b bg-gray-50 flex items-center justify-between text-sm text-gray-500">
-            <span>Tổng: <strong>{filteredData.length}</strong> khoản · Tổng tiền: <strong className="text-blue-600">{fmt(filteredData.reduce((s: number, d: any) => s + d.amount, 0))}</strong> · Còn lại: <strong className="text-red-600">{fmt(filteredData.reduce((s: number, d: any) => s + d.remaining, 0))}</strong></span>
-            {selectedIds.size > 0 && <span className="text-blue-600 font-medium">Đã chọn {selectedIds.size} / {filteredData.length}</span>}
+        {/* Thanh tổng toàn bộ */}
+        {filteredData.length > 0 && selectedIds.size === 0 && (
+          <div className="px-4 py-2 border-b bg-gray-50 flex items-center gap-4 text-sm text-gray-500">
+            <span><strong>{filteredData.length}</strong> khoản</span>
+            <span>Tổng tiền: <strong className="text-blue-600">{fmt(filteredData.reduce((s: number, d: any) => s + d.amount, 0))}</strong></span>
+            <span>Còn lại: <strong className="text-red-600">{fmt(filteredData.reduce((s: number, d: any) => s + d.remaining, 0))}</strong></span>
+          </div>
+        )}
+        {/* Thanh tổng khi có dòng được chọn */}
+        {selectedIds.size > 0 && (
+          <div className="px-4 py-2.5 border-b bg-blue-50 flex items-center gap-6 flex-wrap text-sm">
+            <span className="font-semibold text-blue-700">{selectedIds.size} / {filteredData.length} dòng được chọn</span>
+            <div className="flex items-center gap-1">
+              <span className="text-gray-500">Tổng tiền:</span>
+              <strong className="text-blue-700">{fmt(selectedAmountTotal)}</strong>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-gray-500">Còn lại:</span>
+              <strong className="text-red-600">{fmt(selectedRemainingTotal)}</strong>
+            </div>
+            {selectedPayTotal > 0 && (
+              <div className="flex items-center gap-1">
+                <span className="text-gray-500">Sẽ thanh toán:</span>
+                <strong className="text-green-700">{fmt(selectedPayTotal)}</strong>
+              </div>
+            )}
+            {selectedPayTotal > 0 && (
+              <button
+                onClick={() => payBulk.mutate(Array.from(selectedIds))}
+                disabled={payBulk.isPending}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-green-600 text-white text-xs font-semibold hover:bg-green-700 disabled:opacity-50 ml-auto">
+                <CheckCircle size={13} /> {payBulk.isPending ? 'Đang xử lý...' : `Xác nhận thanh toán ${fmt(selectedPayTotal)}`}
+              </button>
+            )}
           </div>
         )}
         <table className="w-full text-sm">
