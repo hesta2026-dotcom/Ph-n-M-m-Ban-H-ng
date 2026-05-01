@@ -268,10 +268,16 @@ export default function Products() {
             {selectedIds.size > 0 ? `Xuất ${selectedIds.size} sản phẩm` : 'Xuất đầy đủ'}
           </button>
           {selectedIds.size > 0 && (
-            <button onClick={() => setSelectedIds(new Set())}
-              className="text-xs text-gray-400 hover:text-gray-600 underline">
-              Bỏ chọn
-            </button>
+            <>
+              <button onClick={delBulk}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700">
+                <Trash2 size={14} /> Xóa ({selectedIds.size})
+              </button>
+              <button onClick={() => setSelectedIds(new Set())}
+                className="text-xs text-gray-400 hover:text-gray-600 underline">
+                Bỏ chọn
+              </button>
+            </>
           )}
           <button onClick={() => { setEditing(null); setForm(emptyForm); setShowForm(true) }}
             className="btn-primary flex items-center gap-2">
