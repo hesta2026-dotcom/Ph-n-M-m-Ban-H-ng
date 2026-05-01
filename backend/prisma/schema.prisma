@@ -138,6 +138,7 @@ model OrderItem {
   price     Float
   discount  Float   @default(0)
   total     Float
+  unit      String  @default("cái")
 
   order   Order   @relation(fields: [orderId], references: [id])
   product Product @relation(fields: [productId], references: [id])

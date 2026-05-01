@@ -1,18 +1,14 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import {
-  Chart as ChartJS, CategoryScale, LinearScale, BarElement,
-  LineElement, PointElement, Title, Tooltip, Legend
-} from 'chart.js'
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend } from 'chart.js'
 import { Bar } from 'react-chartjs-2'
 import api from '../../services/api'
-import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, Activity, Percent } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, Activity, Percent, FileSpreadsheet, FileText } from 'lucide-react'
+import { exportExcel, exportPDF, PRESETS, fmtPeriod } from '../../utils/export'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend)
 
-const fmt = (n: number) =>
-  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(n)
-
+const fmt = (n: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(n)
 const fmtShort = (n: number) => {
   if (Math.abs(n) >= 1_000_000_000) return (n / 1_000_000_000).toFixed(1) + 'B'
   if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
@@ -20,20 +16,10 @@ const fmtShort = (n: number) => {
   return n.toString()
 }
 
-const PRESETS = [
-  { label: 'Hôm nay', getDates: () => { const d = new Date().toISOString().slice(0,10); return [d, d] } },
-  { label: '7 ngày', getDates: () => { const to = new Date(); const from = new Date(); from.setDate(from.getDate()-6); return [from.toISOString().slice(0,10), to.toISOString().slice(0,10)] } },
-  { label: 'Tháng này', getDates: () => { const now = new Date(); return [new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10), now.toISOString().slice(0,10)] } },
-  { label: 'Tháng trước', getDates: () => { const now = new Date(); const f = new Date(now.getFullYear(), now.getMonth()-1, 1); const t = new Date(now.getFullYear(), now.getMonth(), 0); return [f.toISOString().slice(0,10), t.toISOString().slice(0,10)] } },
-  { label: 'Năm nay', getDates: () => { const now = new Date(); return [new Date(now.getFullYear(), 0, 1).toISOString().slice(0,10), now.toISOString().slice(0,10)] } },
-]
-
 function StatCard({ label, value, sub, icon: Icon, colorClass, bgClass, isProfit }: any) {
   return (
     <div className={`card flex items-start gap-4 ${isProfit !== undefined ? (isProfit ? 'border-l-4 border-green-400' : 'border-l-4 border-red-400') : ''}`}>
-      <div className={`${bgClass} p-3 rounded-xl flex-shrink-0`}>
-        <Icon size={22} className={colorClass} />
-      </div>
+      <div className={`${bgClass} p-3 rounded-xl flex-shrink-0`}><Icon size={22} className={colorClass} /></div>
       <div className="min-w-0">
         <p className={`text-xl font-bold truncate ${colorClass}`}>{value}</p>
         <p className="text-xs text-gray-500 mt-0.5">{label}</p>
@@ -50,8 +36,7 @@ export default function ProfitLoss() {
   const [activePreset, setActivePreset] = useState('Tháng này')
 
   const applyPreset = (preset: typeof PRESETS[number]) => {
-    const [f, t] = preset.getDates()
-    setFrom(f); setTo(t); setActivePreset(preset.label)
+    const [f, t] = preset.getDates(); setFrom(f); setTo(t); setActivePreset(preset.label)
   }
 
   const { data, isLoading } = useQuery({
@@ -74,26 +59,72 @@ export default function ProfitLoss() {
     responsive: true,
     plugins: {
       legend: { position: 'top' as const },
-      tooltip: {
-        callbacks: {
-          label: (ctx: any) => ` ${ctx.dataset.label}: ${fmtShort(ctx.raw)}đ`
-        }
-      }
+      tooltip: { callbacks: { label: (ctx: any) => ` ${ctx.dataset.label}: ${fmtShort(ctx.raw)}đ` } }
     },
-    scales: {
-      y: {
-        ticks: { callback: (v: any) => fmtShort(v) + 'đ' }
-      }
-    }
+    scales: { y: { ticks: { callback: (v: any) => fmtShort(v) + 'đ' } } }
+  }
+
+  const handleExcel = () => {
+    const summary = [
+      ['Doanh thu bán hàng', d.revenue],
+      ['Giá vốn hàng bán', d.cogs],
+      ['Lợi nhuận gộp', d.grossProfit],
+      ['Biên LN gộp (%)', d.grossMargin],
+      ['Thu nhập khác', d.otherIncome],
+      ['Chi phí hoạt động', d.expenses],
+      ['Lợi nhuận ròng', d.netProfit],
+      ['Biên LN ròng (%)', d.netMargin],
+    ]
+    const dailyRows = d.daily.map((row: any) => {
+      const margin = row.revenue ? (row.grossProfit / row.revenue * 100).toFixed(1) : 0
+      return [row.date, row.revenue, row.cogs, row.grossProfit, margin + '%']
+    })
+    const wb = [] as any
+    exportExcel(`Lai-lo_${from}_${to}`, 'Tóm tắt', ['Chỉ tiêu', 'Giá trị'], summary)
+  }
+
+  const handleExcelDaily = () => {
+    const headers = ['Ngày', 'Doanh thu', 'Giá vốn', 'Lợi nhuận gộp', 'Biên lợi nhuận (%)']
+    const rows = d.daily.map((row: any) => {
+      const margin = row.revenue ? (row.grossProfit / row.revenue * 100).toFixed(1) : '0'
+      return [row.date, row.revenue, row.cogs, row.grossProfit, margin]
+    })
+    exportExcel(`Lai-lo_${from}_${to}`, 'Chi tiết ngày', headers, rows)
+  }
+
+  const handlePDF = () => {
+    const headers = ['Ngày', 'Doanh thu', 'Giá vốn', 'Lợi nhuận gộp', 'Biên LN (%)']
+    const rows = d.daily.map((row: any) => {
+      const margin = row.revenue ? (row.grossProfit / row.revenue * 100).toFixed(1) : '0'
+      return [row.date, fmt(row.revenue), fmt(row.cogs), fmt(row.grossProfit), margin + '%']
+    })
+    // Add summary rows at top
+    const summaryRows: any[] = [
+      ['Doanh thu', fmt(d.revenue), '', '', ''],
+      ['Giá vốn', fmt(d.cogs), '', '', ''],
+      ['LN gộp', fmt(d.grossProfit), '', '', d.grossMargin.toFixed(1) + '%'],
+      ['Chi phí', fmt(d.expenses), '', '', ''],
+      ['LN ròng', fmt(d.netProfit), '', '', d.netMargin.toFixed(1) + '%'],
+      ['---Chi tiết theo ngày---', '', '', '', ''],
+      ...rows
+    ]
+    exportPDF(`Lai-lo_${from}_${to}`, 'Báo cáo Lãi / Lỗ', fmtPeriod(from, to), headers, summaryRows)
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Báo cáo Lãi / Lỗ</h1>
           <p className="text-sm text-gray-500 mt-0.5">Phân tích doanh thu, chi phí và lợi nhuận</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={handleExcelDaily} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700">
+            <FileSpreadsheet size={15} /> Excel
+          </button>
+          <button onClick={handlePDF} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700">
+            <FileText size={15} /> PDF
+          </button>
         </div>
       </div>
 
@@ -102,20 +133,17 @@ export default function ProfitLoss() {
         <div className="flex items-center flex-wrap gap-3">
           <div className="flex gap-1.5 flex-wrap">
             {PRESETS.map(p => (
-              <button
-                key={p.label}
-                onClick={() => applyPreset(p)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activePreset === p.label ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
-              >{p.label}</button>
+              <button key={p.label} onClick={() => applyPreset(p)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activePreset === p.label ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}>
+                {p.label}
+              </button>
             ))}
           </div>
           <div className="flex items-center gap-2 ml-auto flex-wrap">
             <span className="text-sm text-gray-500">Từ:</span>
-            <input type="date" className="input text-sm py-1.5 w-38" value={from}
-              onChange={e => { setFrom(e.target.value); setActivePreset('') }} />
+            <input type="date" className="input text-sm py-1.5 w-38" value={from} onChange={e => { setFrom(e.target.value); setActivePreset('') }} />
             <span className="text-sm text-gray-500">Đến:</span>
-            <input type="date" className="input text-sm py-1.5 w-38" value={to}
-              onChange={e => { setTo(e.target.value); setActivePreset('') }} />
+            <input type="date" className="input text-sm py-1.5 w-38" value={to} onChange={e => { setTo(e.target.value); setActivePreset('') }} />
           </div>
         </div>
       </div>
@@ -126,25 +154,15 @@ export default function ProfitLoss() {
         </div>
       ) : (
         <>
-          {/* Thẻ tóm tắt */}
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             <StatCard label="Doanh thu" value={fmt(d.revenue)} icon={TrendingUp} colorClass="text-blue-600" bgClass="bg-blue-50" />
             <StatCard label="Giá vốn hàng bán" value={fmt(d.cogs)} sub={`${d.revenue ? ((d.cogs/d.revenue)*100).toFixed(1) : 0}% doanh thu`} icon={ShoppingBag} colorClass="text-orange-600" bgClass="bg-orange-50" />
             <StatCard label="Lợi nhuận gộp" value={fmt(d.grossProfit)} sub={`Biên lợi nhuận gộp: ${d.grossMargin.toFixed(1)}%`} icon={DollarSign} colorClass={d.grossProfit >= 0 ? 'text-green-600' : 'text-red-600'} bgClass={d.grossProfit >= 0 ? 'bg-green-50' : 'bg-red-50'} isProfit={d.grossProfit >= 0} />
             <StatCard label="Chi phí hoạt động" value={fmt(d.expenses)} icon={TrendingDown} colorClass="text-red-600" bgClass="bg-red-50" />
             <StatCard label="Thu nhập khác" value={fmt(d.otherIncome)} icon={Activity} colorClass="text-purple-600" bgClass="bg-purple-50" />
-            <StatCard
-              label="Lợi nhuận ròng"
-              value={fmt(d.netProfit)}
-              sub={`Biên lợi nhuận ròng: ${d.netMargin.toFixed(1)}%`}
-              icon={Percent}
-              colorClass={d.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}
-              bgClass={d.netProfit >= 0 ? 'bg-emerald-50' : 'bg-red-50'}
-              isProfit={d.netProfit >= 0}
-            />
+            <StatCard label="Lợi nhuận ròng" value={fmt(d.netProfit)} sub={`Biên lợi nhuận ròng: ${d.netMargin.toFixed(1)}%`} icon={Percent} colorClass={d.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'} bgClass={d.netProfit >= 0 ? 'bg-emerald-50' : 'bg-red-50'} isProfit={d.netProfit >= 0} />
           </div>
 
-          {/* Bảng P&L tóm tắt */}
           <div className="card">
             <h2 className="font-semibold text-gray-800 mb-4">Bảng kết quả kinh doanh</h2>
             <div className="space-y-2 text-sm">
@@ -166,32 +184,26 @@ export default function ProfitLoss() {
             </div>
           </div>
 
-          {/* Biểu đồ theo ngày */}
           {d.daily.length > 0 ? (
             <div className="card">
               <h2 className="font-semibold text-gray-800 mb-4">Biểu đồ theo ngày</h2>
               <Bar data={chartData} options={chartOptions} />
             </div>
           ) : (
-            <div className="card text-center py-12 text-gray-400">
-              Không có dữ liệu trong khoảng thời gian này
-            </div>
+            <div className="card text-center py-12 text-gray-400">Không có dữ liệu trong khoảng thời gian này</div>
           )}
 
-          {/* Bảng chi tiết theo ngày */}
           {d.daily.length > 0 && (
             <div className="card p-0 overflow-hidden">
-              <div className="px-6 py-4 border-b">
+              <div className="px-6 py-4 border-b flex items-center justify-between">
                 <h2 className="font-semibold text-gray-800">Chi tiết theo ngày</h2>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50">
-                    <tr>
-                      {['Ngày', 'Doanh thu', 'Giá vốn', 'Lợi nhuận gộp', 'Biên lợi nhuận'].map(h => (
-                        <th key={h} className="px-4 py-3 text-left font-medium text-gray-600">{h}</th>
-                      ))}
-                    </tr>
+                    <tr>{['Ngày', 'Doanh thu', 'Giá vốn', 'Lợi nhuận gộp', 'Biên lợi nhuận'].map(h => (
+                      <th key={h} className="px-4 py-3 text-left font-medium text-gray-600">{h}</th>
+                    ))}</tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {d.daily.map((row: any) => {

@@ -2,36 +2,74 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../../services/api'
 import toast from 'react-hot-toast'
-import { CheckCircle, TrendingDown, TrendingUp } from 'lucide-react'
+import { CheckCircle, TrendingDown, TrendingUp, X, FileSpreadsheet, FileText } from 'lucide-react'
+import { exportExcel, exportPDF, PRESETS, fmtPeriod } from '../../utils/export'
 
 const fmt = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
 const fmtMoney = (n: number) => n === 0 ? '' : n.toLocaleString('vi-VN')
 const parseMoney = (s: string) => +s.replace(/[^0-9]/g, '') || 0
+const PAY_LABEL: any = { CASH: 'Tiền mặt', CARD: 'Thẻ ngân hàng', TRANSFER: 'Chuyển khoản', DEBT: 'Ghi nợ', MIXED: 'Hỗn hợp' }
+const ORDER_STATUS: any = { PENDING: 'Chờ xử lý', COMPLETED: 'Hoàn thành', CANCELLED: 'Đã hủy', REFUNDED: 'Hoàn hàng' }
+const ORDER_STATUS_CLASS: any = { PENDING: 'badge-yellow', COMPLETED: 'badge-green', CANCELLED: 'badge-red', REFUNDED: 'badge-blue' }
 
 export default function Debts() {
   const [type, setType] = useState('SUPPLIER')
-  const [status, setStatus] = useState('UNPAID')
+  const [status, setStatus] = useState('')
+  const now = new Date()
+  const [from, setFrom] = useState(new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10))
+  const [to, setTo] = useState(now.toISOString().slice(0, 10))
+  const [activePreset, setActivePreset] = useState('Tháng này')
   const [payAmount, setPayAmount] = useState<{ [id: string]: number }>({})
+  const [viewDebt, setViewDebt] = useState<any>(null)
   const qc = useQueryClient()
 
+  const applyPreset = (p: typeof PRESETS[number]) => {
+    const [f, t] = p.getDates(); setFrom(f); setTo(t); setActivePreset(p.label)
+  }
+
   const { data } = useQuery({
-    queryKey: ['debts', type, status],
-    queryFn: () => api.get(`/debts?type=${type}&status=${status}&limit=50`).then(r => r.data)
+    queryKey: ['debts', type, status, from, to],
+    queryFn: () => api.get(`/debts?type=${type}&status=${status}&from=${from}&to=${to}&limit=200`).then(r => r.data)
   })
 
   const { data: summary } = useQuery({
     queryKey: ['debts-summary'],
     queryFn: async () => {
-      const [sup, cus] = await Promise.all([
+      const [supUnpaid, supPartial, cusUnpaid, cusPartial] = await Promise.all([
         api.get('/debts?type=SUPPLIER&status=UNPAID&limit=100').then(r => r.data),
         api.get('/debts?type=SUPPLIER&status=PARTIAL&limit=100').then(r => r.data),
+        api.get('/debts?type=CUSTOMER&status=UNPAID&limit=100').then(r => r.data),
+        api.get('/debts?type=CUSTOMER&status=PARTIAL&limit=100').then(r => r.data),
       ])
-      const supAll = [...(sup.data ?? []), ...(cus.data ?? [])]
+      const supAll = [...(supUnpaid.data ?? []), ...(supPartial.data ?? [])]
+      const cusAll = [...(cusUnpaid.data ?? []), ...(cusPartial.data ?? [])]
       return {
         supplierDebt: supAll.reduce((s: number, d: any) => s + d.remaining, 0),
         supplierCount: supAll.length,
+        customerDebt: cusAll.reduce((s: number, d: any) => s + d.remaining, 0),
+        customerCount: cusAll.length,
       }
     }
+  })
+
+  // Fetch order detail khi click vào tổng tiền (chỉ cho CUSTOMER debts có orderId)
+  const { data: orderDetail, isLoading: loadingOrder } = useQuery({
+    queryKey: ['debt-order', viewDebt?.orderId],
+    queryFn: () => api.get(`/orders/${viewDebt.orderId}`).then(r => r.data),
+    enabled: !!viewDebt?.orderId
+  })
+
+  // Fetch purchase detail khi click vào tổng tiền (chỉ cho SUPPLIER debts)
+  const { data: purchaseDetail, isLoading: loadingPurchase } = useQuery({
+    queryKey: ['debt-purchase', viewDebt?.id],
+    queryFn: async () => {
+      // Tìm phiếu nhập theo note chứa mã phiếu
+      const code = viewDebt?.note?.replace('Phiếu nhập ', '')
+      if (!code) return null
+      const res = await api.get(`/purchases?limit=100`)
+      return res.data.data?.find((p: any) => p.code === code) || null
+    },
+    enabled: !!viewDebt && viewDebt.type === 'SUPPLIER' && !viewDebt.orderId
   })
 
   const pay = useMutation({
@@ -46,23 +84,76 @@ export default function Debts() {
     onError: (e: any) => toast.error(e.response?.data?.message || 'Lỗi')
   })
 
+  const switchType = (newType: string) => {
+    setType(newType)
+    setStatus('')
+  }
+
+  const fmt2 = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
+  const handleExcel = () => {
+    const colName = type === 'CUSTOMER' ? 'Khách hàng' : 'Nhà cung cấp'
+    const paidCol = type === 'SUPPLIER' ? 'Đã trả' : 'Đã thu'
+    const remainCol = type === 'SUPPLIER' ? 'Còn phải trả' : 'Còn phải thu'
+    const headers = [colName, 'Diễn giải', 'Tổng tiền', paidCol, remainCol, 'Trạng thái', 'Ngày tạo']
+    const rows = (data?.data || []).map((d: any) => [
+      d.customer?.name || d.supplier?.name || '-', d.note || '-',
+      d.amount, d.paid, d.remaining, statusLabel(d), new Date(d.createdAt).toLocaleDateString('vi-VN')
+    ])
+    exportExcel(`Cong-no_${from}_${to}`, 'Cong no', headers, rows)
+  }
+  const handlePDF = () => {
+    const colName = type === 'CUSTOMER' ? 'Khách hàng' : 'Nhà cung cấp'
+    const paidCol = type === 'SUPPLIER' ? 'Đã trả' : 'Đã thu'
+    const remainCol = type === 'SUPPLIER' ? 'Còn phải trả' : 'Còn phải thu'
+    const headers = [colName, 'Diễn giải', 'Tổng tiền', paidCol, remainCol, 'Trạng thái']
+    const rows = (data?.data || []).map((d: any) => [
+      d.customer?.name || d.supplier?.name || '-', d.note || '-',
+      fmt2(d.amount), fmt2(d.paid), fmt2(d.remaining), statusLabel(d)
+    ])
+    const title = type === 'CUSTOMER' ? 'Phải thu khách hàng' : 'Nợ nhà cung cấp'
+    exportPDF(`Cong-no_${from}_${to}`, title, fmtPeriod(from, to), headers, rows)
+  }
+
   const statusLabel = (d: any) => {
-    if (d.status === 'PAID') return 'Đã trả'
+    if (d.status === 'PAID') return d.type === 'SUPPLIER' ? 'Đã trả' : 'Đã thu'
     if (d.status === 'PARTIAL') return 'Trả 1 phần'
-    return d.type === 'SUPPLIER' ? 'Phải trả' : 'Chưa trả'
+    return d.type === 'SUPPLIER' ? 'Phải trả' : 'Phải thu'
   }
   const statusClass: any = { UNPAID: 'badge-red', PARTIAL: 'badge-yellow', PAID: 'badge-green' }
-
   const colHeader = type === 'CUSTOMER' ? 'Khách hàng' : 'Nhà cung cấp'
-  const payBtnLabel = type === 'SUPPLIER' ? 'Thanh toán NCC' : 'Thu tiền KH'
+  const payBtnLabel = type === 'SUPPLIER' ? 'Thanh toán NCC' : 'Thu tiền khách hàng'
+  const unpaidLabel = type === 'SUPPLIER' ? 'Phải trả' : 'Phải thu'
+
+  const detail = viewDebt?.type === 'CUSTOMER' ? orderDetail : purchaseDetail
+  const loadingDetail = loadingOrder || loadingPurchase
 
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Công nợ</h1>
 
+      {/* Bộ lọc thời gian */}
+      <div className="card py-3">
+        <div className="flex items-center flex-wrap gap-3">
+          <div className="flex gap-1.5 flex-wrap">
+            {PRESETS.map(p => (
+              <button key={p.label} onClick={() => applyPreset(p)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activePreset === p.label ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}>
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 ml-auto flex-wrap">
+            <span className="text-sm text-gray-500">Từ:</span>
+            <input type="date" className="input text-sm py-1.5" value={from} onChange={e => { setFrom(e.target.value); setActivePreset('') }} />
+            <span className="text-sm text-gray-500">Đến:</span>
+            <input type="date" className="input text-sm py-1.5" value={to} onChange={e => { setTo(e.target.value); setActivePreset('') }} />
+          </div>
+        </div>
+      </div>
+
       {/* Tổng quan */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="card p-4 flex items-center gap-3">
+        <div className="card p-4 flex items-center gap-3 cursor-pointer hover:bg-red-50/30 transition-colors" onClick={() => switchType('SUPPLIER')}>
           <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
             <TrendingDown size={20} className="text-red-600" />
           </div>
@@ -72,28 +163,36 @@ export default function Debts() {
             <p className="text-xs text-gray-400">{summary?.supplierCount ?? 0} phiếu chưa thanh toán</p>
           </div>
         </div>
-        <div className="card p-4 flex items-center gap-3">
+        <div className="card p-4 flex items-center gap-3 cursor-pointer hover:bg-blue-50/30 transition-colors" onClick={() => switchType('CUSTOMER')}>
           <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
             <TrendingUp size={20} className="text-blue-600" />
           </div>
           <div>
-            <p className="text-xs text-gray-500">Khách nợ mình</p>
-            <p className="text-lg font-bold text-blue-600">—</p>
-            <p className="text-xs text-gray-400">Chuyển sang tab Nợ khách hàng</p>
+            <p className="text-xs text-gray-500">Phải thu khách hàng</p>
+            <p className="text-lg font-bold text-blue-600">{fmt(summary?.customerDebt ?? 0)}</p>
+            <p className="text-xs text-gray-400">{summary?.customerCount ?? 0} khoản chưa thu</p>
           </div>
         </div>
       </div>
 
       {/* Filter tabs */}
-      <div className="flex gap-2 flex-wrap">
-        {[['SUPPLIER', 'Nợ nhà cung cấp'], ['CUSTOMER', 'Nợ khách hàng']].map(([val, label]) => (
-          <button key={val} onClick={() => setType(val)}
+      <div className="flex gap-2 flex-wrap items-center">
+        {[['SUPPLIER', 'Nợ nhà cung cấp'], ['CUSTOMER', 'Phải thu khách hàng']].map(([val, label]) => (
+          <button key={val} onClick={() => switchType(val)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${type === val ? 'bg-blue-600 text-white' : 'bg-white border hover:bg-gray-50'}`}>
             {label}
           </button>
         ))}
-        <div className="ml-auto flex gap-2">
-          {[['UNPAID', type === 'SUPPLIER' ? 'Phải trả' : 'Chưa trả'], ['PARTIAL', 'Trả 1 phần'], ['PAID', 'Đã trả'], ['', 'Tất cả']].map(([val, label]) => (
+        <div className="flex gap-2 ml-auto">
+          <button onClick={handleExcel} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700">
+            <FileSpreadsheet size={14} /> Excel
+          </button>
+          <button onClick={handlePDF} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700">
+            <FileText size={14} /> PDF
+          </button>
+        </div>
+        <div className="flex gap-2">
+          {[['UNPAID', unpaidLabel], ['PARTIAL', 'Trả 1 phần'], ['PAID', type === 'SUPPLIER' ? 'Đã trả' : 'Đã thu'], ['', 'Tất cả']].map(([val, label]) => (
             <button key={val} onClick={() => setStatus(val)}
               className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${status === val ? 'bg-gray-800 text-white' : 'bg-white border hover:bg-gray-50'}`}>
               {label}
@@ -106,7 +205,7 @@ export default function Debts() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b">
             <tr>
-              {[colHeader, 'Diễn giải', 'Tổng nợ', 'Đã thanh toán', 'Còn lại', 'Trạng thái', 'Ngày tạo', 'Thanh toán'].map(h => (
+              {[colHeader, 'Diễn giải', 'Tổng tiền', type === 'SUPPLIER' ? 'Số tiền đã trả' : 'Số tiền đã thu', type === 'SUPPLIER' ? 'Còn phải trả' : 'Còn phải thu', 'Trạng thái', 'Ngày tạo', 'Thao tác'].map(h => (
                 <th key={h} className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -116,48 +215,164 @@ export default function Debts() {
               <tr key={d.id} className={`hover:bg-gray-50 ${d.status === 'UNPAID' ? 'bg-red-50/30' : ''}`}>
                 <td className="px-4 py-3 font-medium">{d.customer?.name || d.supplier?.name || '-'}</td>
                 <td className="px-4 py-3 text-gray-400 text-xs max-w-[160px] truncate">{d.note || '-'}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{fmt(d.amount)}</td>
-                <td className="px-4 py-3 text-green-600 whitespace-nowrap">{fmt(d.paid)}</td>
-                <td className="px-4 py-3 text-red-600 font-bold whitespace-nowrap">{fmt(d.remaining)}</td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <button
+                    onClick={() => setViewDebt(d)}
+                    className="font-semibold text-blue-600 hover:text-blue-800 hover:underline">
+                    {fmt(d.amount)}
+                  </button>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <div className="relative w-32">
+                    <input
+                      className="border rounded px-2 py-1 w-full text-sm text-right pr-5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      placeholder="Nhập số tiền..."
+                      value={fmtMoney(payAmount[d.id] ?? 0)}
+                      onChange={e => setPayAmount(p => ({ ...p, [d.id]: parseMoney(e.target.value) }))}
+                    />
+                    <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs">đ</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  {d.remaining > 0
+                    ? <span className="font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">{fmt(d.remaining)}</span>
+                    : <span className="text-gray-400 text-xs">—</span>}
+                </td>
                 <td className="px-4 py-3">
-                  <span className={`badge ${statusClass[d.status]}`}>{statusLabel(d)}</span>
+                  <div className="flex flex-col gap-0.5">
+                    <span className={`badge ${statusClass[d.status]}`}>{statusLabel(d)}</span>
+                    {d.paid > 0 && <span className="text-xs text-green-600">{fmt(d.paid)}</span>}
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-gray-400 whitespace-nowrap text-xs">{new Date(d.createdAt).toLocaleDateString('vi-VN')}</td>
                 <td className="px-4 py-3">
-                  {d.status !== 'PAID' && (
-                    <div className="flex items-center gap-1.5">
-                      <div className="relative">
-                        <input
-                          className="border rounded px-2 py-1 w-28 text-sm text-right pr-5"
-                          placeholder="0"
-                          value={fmtMoney(payAmount[d.id] || 0)}
-                          onChange={e => setPayAmount(p => ({ ...p, [d.id]: parseMoney(e.target.value) }))}
-                        />
-                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs">đ</span>
-                      </div>
-                      <button
-                        onClick={() => pay.mutate({ id: d.id, amount: payAmount[d.id] })}
-                        disabled={!payAmount[d.id] || pay.isPending}
-                        title={payBtnLabel}
-                        className="text-green-600 hover:text-green-800 disabled:opacity-40">
-                        <CheckCircle size={20} />
-                      </button>
-                    </div>
-                  )}
-                  {d.status === 'PAID' && (
-                    <span className="text-green-500 text-xs flex items-center gap-1"><CheckCircle size={14} /> Hoàn tất</span>
-                  )}
+                  <button
+                    onClick={() => pay.mutate({ id: d.id, amount: payAmount[d.id] })}
+                    disabled={!payAmount[d.id] || pay.isPending}
+                    title={payBtnLabel}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-medium hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap">
+                    <CheckCircle size={14} /> Xác nhận
+                  </button>
                 </td>
               </tr>
             ))}
             {!data?.data?.length && (
               <tr><td colSpan={8} className="text-center py-10 text-gray-400">
-                {status === 'UNPAID' ? 'Không có công nợ cần thanh toán' : 'Không có dữ liệu'}
+                {status === 'UNPAID' ? `Không có khoản ${unpaidLabel.toLowerCase()} nào` : 'Không có dữ liệu'}
               </td></tr>
             )}
           </tbody>
         </table>
       </div>
+
+      {/* ===== Modal chi tiết đơn hàng / phiếu nhập ===== */}
+      {viewDebt && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
+              <div>
+                <h2 className="font-bold text-gray-800">{viewDebt.note || 'Chi tiết'}</h2>
+                <p className="text-xs text-gray-400">{viewDebt.customer?.name || viewDebt.supplier?.name}</p>
+              </div>
+              <button onClick={() => setViewDebt(null)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+            </div>
+            <div className="overflow-y-auto p-6 space-y-4">
+              {loadingDetail && <p className="text-center text-gray-400 py-8">Đang tải...</p>}
+
+              {/* Chi tiết đơn hàng (CUSTOMER) */}
+              {!loadingDetail && detail && viewDebt.type === 'CUSTOMER' && (
+                <>
+                  <div className="grid grid-cols-2 gap-3 text-sm bg-gray-50 rounded-xl p-4">
+                    <div><span className="text-gray-500">Mã đơn: </span><strong className="font-mono">{detail.orderCode}</strong></div>
+                    <div><span className="text-gray-500">Ngày: </span><strong>{new Date(detail.createdAt).toLocaleString('vi-VN')}</strong></div>
+                    <div><span className="text-gray-500">Khách hàng: </span><strong>{detail.customer?.name || 'Khách lẻ'}</strong></div>
+                    <div><span className="text-gray-500">SĐT: </span><strong>{detail.customer?.phone || '—'}</strong></div>
+                    <div><span className="text-gray-500">Thanh toán: </span><strong>{PAY_LABEL[detail.paymentMethod]}</strong></div>
+                    <div><span className="text-gray-500">Trạng thái: </span>
+                      <span className={`badge ${ORDER_STATUS_CLASS[detail.status]}`}>{ORDER_STATUS[detail.status]}</span>
+                    </div>
+                  </div>
+                  <table className="w-full text-sm border rounded-xl overflow-hidden">
+                    <thead className="bg-gray-50">
+                      <tr>{['Sản phẩm', 'ĐVT', 'SL', 'Đơn giá', 'Thành tiền'].map(h => (
+                        <th key={h} className="px-3 py-2 text-left font-medium text-gray-600">{h}</th>
+                      ))}</tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {detail.items?.map((item: any, i: number) => (
+                        <tr key={i}>
+                          <td className="px-3 py-2">
+                            <p>{item.product?.name}</p>
+                            <p className="text-xs text-gray-400 font-mono">{item.product?.code}</p>
+                          </td>
+                          <td className="px-3 py-2 text-gray-500">{item.unit || item.product?.unit || 'cái'}</td>
+                          <td className="px-3 py-2 font-medium">{item.qty}</td>
+                          <td className="px-3 py-2">{fmt(item.price)}</td>
+                          <td className="px-3 py-2 font-semibold text-blue-600">{fmt(item.total)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div className="flex justify-end">
+                    <div className="w-52 space-y-1 text-sm">
+                      <div className="flex justify-between"><span className="text-gray-500">Tạm tính</span><span>{fmt(detail.subtotal)}</span></div>
+                      {detail.discount > 0 && <div className="flex justify-between text-red-500"><span>Giảm giá</span><span>-{fmt(detail.discount)}</span></div>}
+                      <div className="flex justify-between font-bold text-base border-t pt-2">
+                        <span>Tổng cộng</span><span className="text-blue-600">{fmt(detail.total)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Chi tiết phiếu nhập (SUPPLIER) */}
+              {!loadingDetail && detail && viewDebt.type === 'SUPPLIER' && (
+                <>
+                  <div className="grid grid-cols-2 gap-3 text-sm bg-gray-50 rounded-xl p-4">
+                    <div><span className="text-gray-500">Mã phiếu: </span><strong className="font-mono">{detail.code}</strong></div>
+                    <div><span className="text-gray-500">Ngày: </span><strong>{new Date(detail.createdAt).toLocaleString('vi-VN')}</strong></div>
+                    <div><span className="text-gray-500">Nhà cung cấp: </span><strong>{detail.supplier?.name}</strong></div>
+                    <div><span className="text-gray-500">Ghi chú: </span><strong>{detail.note || '—'}</strong></div>
+                  </div>
+                  <table className="w-full text-sm border rounded-xl overflow-hidden">
+                    <thead className="bg-gray-50">
+                      <tr>{['Sản phẩm', 'SL', 'Giá nhập', 'Thành tiền'].map(h => (
+                        <th key={h} className="px-3 py-2 text-left font-medium text-gray-600">{h}</th>
+                      ))}</tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {detail.items?.map((item: any, i: number) => (
+                        <tr key={i}>
+                          <td className="px-3 py-2">
+                            <p>{item.product?.name}</p>
+                            <p className="text-xs text-gray-400 font-mono">{item.product?.code}</p>
+                          </td>
+                          <td className="px-3 py-2 font-medium">{item.qty}</td>
+                          <td className="px-3 py-2">{fmt(item.costPrice)}</td>
+                          <td className="px-3 py-2 font-semibold text-blue-600">{fmt(item.total)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div className="flex justify-end">
+                    <div className="w-52 space-y-1 text-sm">
+                      <div className="flex justify-between font-bold text-base border-t pt-2">
+                        <span>Tổng cộng</span><span className="text-blue-600">{fmt(detail.total)}</span>
+                      </div>
+                      <div className="flex justify-between text-green-600"><span>Đã trả</span><span>{fmt(detail.paid)}</span></div>
+                      <div className="flex justify-between text-red-600"><span>Còn nợ</span><span>{fmt(detail.debt)}</span></div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {!loadingDetail && !detail && (
+                <p className="text-center text-gray-400 py-8">Không tìm thấy thông tin chi tiết</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

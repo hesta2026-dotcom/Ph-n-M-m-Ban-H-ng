@@ -92,7 +92,8 @@ export default function CreateOrderModal({ onClose, onSuccess }: Props) {
       items: cart.map(i => ({
         productId: i.productId,
         price: i.unitPrice,
-        qty: i.selectedUnit === i.packageUnit && i.packageQty ? i.qty * i.packageQty : i.qty
+        qty: i.selectedUnit === i.packageUnit && i.packageQty ? i.qty * i.packageQty : i.qty,
+        unit: i.selectedUnit
       })),
       paymentMethod, discount, amountPaid, note, channel, status
     }),

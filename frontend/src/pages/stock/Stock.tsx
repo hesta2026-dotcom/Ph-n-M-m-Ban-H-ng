@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../../services/api'
 import toast from 'react-hot-toast'
-import { AlertTriangle, Plus, Package, Tag, Building2, X, PackagePlus } from 'lucide-react'
+import { AlertTriangle, Plus, Package, Tag, Building2, X, PackagePlus, FileSpreadsheet, FileText } from 'lucide-react'
+import { exportExcel, exportPDF, PRESETS, fmtPeriod } from '../../utils/export'
 import NewProductModal from '../products/NewProductModal'
 import NewSupplierModal from '../suppliers/NewSupplierModal'
 
@@ -45,6 +46,11 @@ function ProductInfo({ product }: { product: any }) {
 export default function Stock() {
   const [tab, setTab] = useState<'low' | 'all' | 'logs' | 'purchase'>('low')
   const [viewPurchase, setViewPurchase] = useState<any>(null)
+  const now2 = new Date()
+  const [from, setFrom] = useState(new Date(now2.getFullYear(), now2.getMonth(), 1).toISOString().slice(0, 10))
+  const [to, setTo] = useState(now2.toISOString().slice(0, 10))
+  const [activePreset, setActivePreset] = useState('Tháng này')
+  const applyPreset = (p: typeof PRESETS[number]) => { const [f, t] = p.getDates(); setFrom(f); setTo(t); setActivePreset(p.label) }
   const [showAdjust, setShowAdjust] = useState(false)
   const [adjustForm, setAdjustForm] = useState({ productId: '', newStock: 0, note: '' })
   const [showPurchase, setShowPurchase] = useState(false)
@@ -64,13 +70,13 @@ export default function Stock() {
     enabled: tab === 'all'
   })
   const { data: logs } = useQuery({
-    queryKey: ['stock-logs'],
-    queryFn: () => api.get('/stock/logs?limit=100').then(r => r.data),
+    queryKey: ['stock-logs', from, to],
+    queryFn: () => api.get(`/stock/logs?limit=200&from=${from}&to=${to}`).then(r => r.data),
     enabled: tab === 'logs'
   })
   const { data: purchases } = useQuery({
-    queryKey: ['purchases'],
-    queryFn: () => api.get('/purchases?limit=50').then(r => r.data),
+    queryKey: ['purchases', from, to],
+    queryFn: () => api.get(`/purchases?limit=200&from=${from}&to=${to}`).then(r => r.data),
     enabled: tab === 'purchase'
   })
   const { data: products } = useQuery({
@@ -160,6 +166,28 @@ export default function Stock() {
         ))}
       </div>
 
+      {/* Bộ lọc thời gian — hiện cho Lịch sử kho và Phiếu nhập */}
+      {(tab === 'logs' || tab === 'purchase') && (
+        <div className="card py-3">
+          <div className="flex items-center flex-wrap gap-3">
+            <div className="flex gap-1.5 flex-wrap">
+              {PRESETS.map(p => (
+                <button key={p.label} onClick={() => applyPreset(p)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activePreset === p.label ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 ml-auto flex-wrap">
+              <span className="text-sm text-gray-500">Từ:</span>
+              <input type="date" className="input text-sm py-1.5" value={from} onChange={e => { setFrom(e.target.value); setActivePreset('') }} />
+              <span className="text-sm text-gray-500">Đến:</span>
+              <input type="date" className="input text-sm py-1.5" value={to} onChange={e => { setTo(e.target.value); setActivePreset('') }} />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Tab: Hàng sắp hết ── */}
       {tab === 'low' && (
         <>
@@ -210,8 +238,24 @@ export default function Stock() {
       {/* ── Tab: Tất cả sản phẩm ── */}
       {tab === 'all' && (
         <>
-          <input className="input" placeholder="Tìm theo tên, mã, thương hiệu..."
-            value={searchAll} onChange={e => setSearchAll(e.target.value)} />
+          <div className="flex gap-2 items-center">
+            <input className="input flex-1" placeholder="Tìm theo tên, mã, thương hiệu..."
+              value={searchAll} onChange={e => setSearchAll(e.target.value)} />
+            <button onClick={() => {
+              const headers = ['Tên sản phẩm', 'Mã SP', 'Thương hiệu', 'Đơn vị', 'Tồn kho', 'Tối thiểu', 'Giá bán', 'Giá vốn']
+              const rows = (allProducts || []).map((p: any) => [p.name, p.code, p.brand || '', p.unit, p.stock, p.minStock, p.price, p.costPrice])
+              exportExcel('Ton-kho', 'Ton kho', headers, rows)
+            }} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 whitespace-nowrap">
+              <FileSpreadsheet size={14} /> Excel
+            </button>
+            <button onClick={() => {
+              const headers = ['Tên sản phẩm', 'Mã SP', 'Đơn vị', 'Tồn kho', 'Giá bán', 'Giá vốn']
+              const rows = (allProducts || []).map((p: any) => [p.name, p.code, p.unit, p.stock, fmt(p.price), fmt(p.costPrice)])
+              exportPDF('Ton-kho', 'Danh sach ton kho', `Tong: ${allProducts?.length || 0} san pham`, headers, rows)
+            }} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 whitespace-nowrap">
+              <FileText size={14} /> PDF
+            </button>
+          </div>
           <div className="card p-0 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -254,6 +298,27 @@ export default function Stock() {
       {/* ── Tab: Lịch sử kho ── */}
       {tab === 'logs' && (
         <div className="card p-0 overflow-hidden">
+          <div className="px-5 py-3 border-b flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-600">Lịch sử xuất nhập kho</span>
+            <div className="flex gap-2">
+              <button onClick={() => {
+                const headers = ['Sản phẩm', 'Mã SP', 'Loại', 'Số lượng', 'Tồn trước', 'Tồn sau', 'Ghi chú', 'Thời gian']
+                const logTypeLabel: any = { IMPORT: 'Nhập kho', EXPORT: 'Xuất kho', ADJUST: 'Điều chỉnh', RETURN: 'Hoàn hàng' }
+                const rows = (logs || []).map((l: any) => [l.product?.name || '', l.product?.code || '', logTypeLabel[l.type] || l.type, l.qty, l.before, l.after, l.note || '', new Date(l.createdAt).toLocaleString('vi-VN')])
+                exportExcel(`Lich-su-kho_${from}_${to}`, 'Lich su kho', headers, rows)
+              }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-medium hover:bg-green-700">
+                <FileSpreadsheet size={13} /> Excel
+              </button>
+              <button onClick={() => {
+                const headers = ['Sản phẩm', 'Loại', 'SL', 'Tồn trước', 'Tồn sau', 'Ghi chú', 'Thời gian']
+                const logTypeLabel: any = { IMPORT: 'Nhập kho', EXPORT: 'Xuất kho', ADJUST: 'Điều chỉnh', RETURN: 'Hoàn hàng' }
+                const rows = (logs || []).map((l: any) => [l.product?.name || '', logTypeLabel[l.type] || l.type, l.qty, l.before, l.after, l.note || '', new Date(l.createdAt).toLocaleDateString('vi-VN')])
+                exportPDF(`Lich-su-kho_${from}_${to}`, 'Lich su xuat nhap kho', fmtPeriod(from, to), headers, rows)
+              }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-medium hover:bg-red-700">
+                <FileText size={13} /> PDF
+              </button>
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b">
@@ -298,6 +363,27 @@ export default function Stock() {
       {/* ── Tab: Phiếu nhập ── */}
       {tab === 'purchase' && (
         <div className="card p-0 overflow-hidden">
+          <div className="px-5 py-3 border-b flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-600">Danh sách phiếu nhập</span>
+            <div className="flex gap-2">
+              <button onClick={() => {
+                const headers = ['Mã phiếu', 'Nhà cung cấp', 'Tổng tiền', 'Đã trả', 'Còn nợ', 'Trạng thái', 'Ngày nhập']
+                const sLabel: any = { COMPLETED: 'Hoàn thành', CANCELLED: 'Đã hủy', PENDING: 'Chờ xử lý' }
+                const rows = (purchases?.data || []).map((p: any) => [p.code, p.supplier?.name || '', p.total, p.paid, p.debt, sLabel[p.status] || p.status, new Date(p.createdAt).toLocaleDateString('vi-VN')])
+                exportExcel(`Phieu-nhap_${from}_${to}`, 'Phieu nhap', headers, rows)
+              }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-medium hover:bg-green-700">
+                <FileSpreadsheet size={13} /> Excel
+              </button>
+              <button onClick={() => {
+                const headers = ['Mã phiếu', 'Nhà cung cấp', 'Tổng tiền', 'Đã trả', 'Còn nợ', 'Trạng thái']
+                const sLabel: any = { COMPLETED: 'Hoàn thành', CANCELLED: 'Đã hủy', PENDING: 'Chờ xử lý' }
+                const rows = (purchases?.data || []).map((p: any) => [p.code, p.supplier?.name || '', fmt(p.total), fmt(p.paid), fmt(p.debt), sLabel[p.status] || p.status])
+                exportPDF(`Phieu-nhap_${from}_${to}`, 'Danh sach phieu nhap hang', fmtPeriod(from, to), headers, rows)
+              }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-medium hover:bg-red-700">
+                <FileText size={13} /> PDF
+              </button>
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b">

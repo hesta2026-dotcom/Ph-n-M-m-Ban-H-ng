@@ -19,7 +19,7 @@ export default function ExportSlip({ order, onClose }: Props) {
       <html>
       <head>
         <meta charset="utf-8"/>
-        <title>Phiếu xuất hàng - ${order.orderCode}</title>
+        <title>Hesta Distribution - Phiếu xuất hàng ${order.orderCode}</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: Arial, sans-serif; font-size: 13px; color: #111; padding: 24px; }
@@ -83,7 +83,7 @@ export default function ExportSlip({ order, onClose }: Props) {
             {/* Header */}
             <div className="header text-center border-b-2 border-gray-900 pb-3 mb-4">
               <h1 className="text-2xl font-bold tracking-wide">PHIẾU XUẤT HÀNG</h1>
-              <h2 className="text-sm text-gray-500 mt-1">POS System — Quản lý bán hàng</h2>
+              <h2 className="text-sm text-gray-500 mt-1">Hesta Distribution</h2>
             </div>
 
             {/* Info grid */}
@@ -118,7 +118,7 @@ export default function ExportSlip({ order, onClose }: Props) {
                     <td className="border border-gray-200 px-2 py-1.5 text-center">{idx + 1}</td>
                     <td className="border border-gray-200 px-2 py-1.5 font-mono text-xs">{item.product?.code}</td>
                     <td className="border border-gray-200 px-2 py-1.5">{item.product?.name}</td>
-                    <td className="border border-gray-200 px-2 py-1.5 text-center">{item.product?.unit || 'cái'}</td>
+                    <td className="border border-gray-200 px-2 py-1.5 text-center">{item.unit || item.product?.unit || 'cái'}</td>
                     <td className="border border-gray-200 px-2 py-1.5 text-right font-medium">{item.qty}</td>
                     <td className="border border-gray-200 px-2 py-1.5 text-right">{fmt(item.price)}</td>
                     <td className="border border-gray-200 px-2 py-1.5 text-right font-semibold">{fmt(item.total)}</td>

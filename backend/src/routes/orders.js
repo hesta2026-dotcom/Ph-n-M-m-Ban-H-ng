@@ -5,11 +5,12 @@ const prisma = new PrismaClient();
 
 router.get('/', auth, async (req, res) => {
   try {
-    const { from, to, status, channel, page = 1, limit = 20 } = req.query;
+    const { from, to, status, channel, page = 1, limit = 20, search } = req.query;
     const where = {};
     if (status) where.status = status;
     if (channel) where.channel = channel;
     if (from || to) where.createdAt = { ...(from && { gte: new Date(from) }), ...(to && { lte: new Date(to) }) };
+    if (search) where.orderCode = { contains: search };
     const [orders, total] = await Promise.all([
       prisma.order.findMany({ where, include: { customer: true, user: { select: { id: true, name: true } }, items: { include: { product: true } } }, skip: (page - 1) * limit, take: +limit, orderBy: { createdAt: 'desc' } }),
       prisma.order.count({ where })
@@ -33,7 +34,7 @@ router.post('/', auth, async (req, res) => {
           subtotal, discount: discount || 0, tax: tax || 0, total,
           amountPaid: amountPaid || 0, change: change > 0 ? change : 0,
           note, channel: channel || 'store', status,
-          items: { create: items.map(i => ({ productId: i.productId, qty: i.qty, price: i.price, discount: i.discount || 0, total: i.price * i.qty - (i.discount || 0) })) }
+          items: { create: items.map(i => ({ productId: i.productId, qty: i.qty, price: i.price, discount: i.discount || 0, total: i.price * i.qty - (i.discount || 0), unit: i.unit || 'cái' })) }
         },
         include: { items: true, customer: true }
       });
@@ -47,9 +48,16 @@ router.post('/', auth, async (req, res) => {
         if (customerId) {
           await tx.customer.update({ where: { id: customerId }, data: { totalSpent: { increment: total }, points: { increment: Math.floor(total / 1000) } } });
         }
-        if (paymentMethod === 'DEBT' && customerId) {
-          await tx.debt.create({ data: { type: 'CUSTOMER', customerId, orderId: o.id, amount: total, remaining: total, status: 'UNPAID' } });
-          await tx.customer.update({ where: { id: customerId }, data: { debt: { increment: total } } });
+        // Tạo công nợ phải thu - luôn UNPAID, chờ xác nhận thủ công
+        if (customerId) {
+          await tx.debt.create({
+            data: {
+              type: 'CUSTOMER', customerId, orderId: o.id,
+              amount: total, paid: 0, remaining: total,
+              status: 'UNPAID',
+              note: `Đơn hàng ${orderCode}`
+            }
+          });
         }
       }
 
@@ -100,7 +108,22 @@ router.patch('/:id/status', auth, async (req, res) => {
         if (order.customerId) {
           await tx.customer.update({ where: { id: order.customerId }, data: { totalSpent: { increment: order.total }, points: { increment: Math.floor(order.total / 1000) } } });
         }
+        // Tạo công nợ phải thu - luôn UNPAID, chờ xác nhận thủ công
+        if (order.customerId) {
+          const existing = await tx.debt.findUnique({ where: { orderId: order.id } });
+          if (!existing) {
+            await tx.debt.create({
+              data: {
+                type: 'CUSTOMER', customerId: order.customerId, orderId: order.id,
+                amount: order.total, paid: 0, remaining: order.total,
+                status: 'UNPAID',
+                note: `Đơn hàng ${order.orderCode}`
+              }
+            });
+          }
+        }
       }
+
       if (order.status === 'COMPLETED' && (status === 'REFUNDED' || status === 'CANCELLED')) {
         for (const item of order.items) {
           const prod = await tx.product.findUnique({ where: { id: item.productId } });
@@ -110,7 +133,16 @@ router.patch('/:id/status', auth, async (req, res) => {
         if (order.customerId) {
           await tx.customer.update({ where: { id: order.customerId }, data: { totalSpent: { decrement: order.total }, points: { decrement: Math.floor(order.total / 1000) } } });
         }
+        // Xóa/cập nhật công nợ khi hủy hoặc hoàn hàng
+        const debt = await tx.debt.findUnique({ where: { orderId: order.id } });
+        if (debt) {
+          if (debt.status === 'UNPAID' && order.customerId) {
+            await tx.customer.update({ where: { id: order.customerId }, data: { debt: { decrement: debt.remaining } } });
+          }
+          await tx.debt.delete({ where: { orderId: order.id } });
+        }
       }
+
       await tx.order.update({ where: { id: order.id }, data: { status } });
       await tx.auditLog.create({ data: { userId: req.user.id, action: `STATUS_${status}`, entity: 'Order', entityId: order.id } });
     });

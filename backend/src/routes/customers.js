@@ -6,12 +6,44 @@ const prisma = new PrismaClient();
 router.get('/', auth, async (req, res) => {
   try {
     const { search, page = 1, limit = 20 } = req.query;
-    const where = search ? { OR: [{ name: { contains: search, mode: 'insensitive' } }, { phone: { contains: search } }] } : {};
-    const [customers, total] = await Promise.all([
+    const where = search ? { OR: [{ name: { contains: search } }, { phone: { contains: search } }] } : {};
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const validStatus = { notIn: ['CANCELLED', 'REFUNDED'] };
+
+    const [customers, total, monthlyStats, totalStats] = await Promise.all([
       prisma.customer.findMany({ where, skip: (page - 1) * limit, take: +limit, orderBy: { name: 'asc' } }),
-      prisma.customer.count({ where })
+      prisma.customer.count({ where }),
+      prisma.order.groupBy({
+        by: ['customerId'],
+        where: { status: validStatus, createdAt: { gte: monthStart }, customerId: { not: null } },
+        _count: { id: true },
+        _sum: { total: true }
+      }),
+      prisma.order.groupBy({
+        by: ['customerId'],
+        where: { status: validStatus, customerId: { not: null } },
+        _sum: { total: true }
+      })
     ]);
-    res.json({ data: customers, total });
+
+    const monthlyMap = {};
+    for (const s of monthlyStats) {
+      monthlyMap[s.customerId] = { monthlyCount: s._count.id, monthlyRevenue: s._sum.total || 0 };
+    }
+    const totalMap = {};
+    for (const s of totalStats) {
+      totalMap[s.customerId] = s._sum.total || 0;
+    }
+
+    const data = customers.map(c => ({
+      ...c,
+      orderValue: totalMap[c.id] || 0,
+      monthlyCount: monthlyMap[c.id]?.monthlyCount || 0,
+      monthlyRevenue: monthlyMap[c.id]?.monthlyRevenue || 0
+    }));
+
+    res.json({ data, total });
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
