@@ -96,7 +96,20 @@ export default function Debts() {
     onError: (e: any) => toast.error(e.response?.data?.message || 'Lỗi')
   })
 
-  const switchType = (newType: string) => { setType(newType); setStatus('') }
+  const payBulk = useMutation({
+    mutationFn: (ids: string[]) =>
+      Promise.all(ids.map(id => api.post(`/debts/${id}/pay`, { amount: payAmount[id] || 0 }).catch(() => null))),
+    onSuccess: () => {
+      toast.success(`Đã thanh toán ${selectedIds.size} khoản`)
+      qc.invalidateQueries({ queryKey: ['debts'] })
+      qc.invalidateQueries({ queryKey: ['debts-summary'] })
+      setSelectedIds(new Set())
+      setPayAmount({})
+    },
+    onError: () => toast.error('Lỗi thanh toán hàng loạt')
+  })
+
+  const switchType = (newType: string) => { setType(newType); setStatus(''); setSelectedIds(new Set()) }
 
   const statusLabel = (d: any) => {
     if (d.status === 'PAID') return d.type === 'SUPPLIER' ? 'Đã trả' : 'Đã thu'
