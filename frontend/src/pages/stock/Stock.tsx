@@ -184,6 +184,29 @@ export default function Stock() {
     (p.brand || '').toLowerCase().includes(searchLow.toLowerCase())
   )
 
+  const filteredLogs = (logs || []).filter((l: any) => {
+    if (!searchLogs) return true
+    const q = searchLogs.toLowerCase()
+    return (l.product?.name || '').toLowerCase().includes(q) ||
+      (l.product?.code || '').toLowerCase().includes(q) ||
+      (l.note || '').toLowerCase().includes(q)
+  })
+
+  const filteredPurchases = (purchases?.data || []).filter((p: any) => {
+    if (!searchPurchase) return true
+    const q = searchPurchase.toLowerCase()
+    return p.code.toLowerCase().includes(q) ||
+      (p.supplier?.name || '').toLowerCase().includes(q)
+  })
+
+  const exportLogs = selectedLogIds.size > 0
+    ? filteredLogs.filter((l: any) => selectedLogIds.has(l.id))
+    : filteredLogs
+
+  const exportPurchases = selectedPurchaseIds.size > 0
+    ? filteredPurchases.filter((p: any) => selectedPurchaseIds.has(p.id))
+    : filteredPurchases
+
   const purchaseTotal = purchaseForm.items.reduce((s, i) => s + i.qty * i.costPrice, 0)
 
   return (
