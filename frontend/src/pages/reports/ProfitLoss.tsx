@@ -17,15 +17,18 @@ const fmtShort = (n: number) => {
   return n.toString()
 }
 
-function StatCard({ label, value, sub, icon: Icon, colorClass, bgClass, isProfit }: any) {
+function StatCard({ label, value, sub, icon: Icon, colorClass, bgClass, isProfit, onClick }: any) {
   return (
-    <div className={`card flex items-start gap-4 ${isProfit !== undefined ? (isProfit ? 'border-l-4 border-green-400' : 'border-l-4 border-red-400') : ''}`}>
+    <div
+      onClick={onClick}
+      className={`card flex items-start gap-4 ${isProfit !== undefined ? (isProfit ? 'border-l-4 border-green-400' : 'border-l-4 border-red-400') : ''} ${onClick ? 'cursor-pointer hover:shadow-md hover:bg-gray-50/50 transition-all' : ''}`}>
       <div className={`${bgClass} p-3 rounded-xl flex-shrink-0`}><Icon size={22} className={colorClass} /></div>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className={`text-xl font-bold truncate ${colorClass}`}>{value}</p>
         <p className="text-xs text-gray-500 mt-0.5">{label}</p>
         {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
       </div>
+      {onClick && <ExternalLink size={14} className="text-gray-300 flex-shrink-0 mt-1" />}
     </div>
   )
 }
