@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 router.get('/', auth, async (req, res) => {
   try {
     const { page = 1, limit = 200, supplierId, from, to } = req.query;
-    const where = { ...(supplierId && { supplierId }), ...(from || to ? { createdAt: { ...(from && { gte: new Date(from) }), ...(to && { lte: new Date(to + 'T23:59:59') }) } } : {}) };
+    const where = { ...(supplierId && { supplierId }), ...(from || to ? { createdAt: { ...(from && { gte: new Date(from + 'T00:00:00+07:00') }), ...(to && { lte: new Date(to + 'T23:59:59+07:00') }) } } : {}) };
     const [purchases, total] = await Promise.all([
       prisma.purchaseOrder.findMany({ where, include: { supplier: true, items: { include: { product: true } } }, skip: (page - 1) * limit, take: +limit, orderBy: { createdAt: 'desc' } }),
       prisma.purchaseOrder.count({ where })
