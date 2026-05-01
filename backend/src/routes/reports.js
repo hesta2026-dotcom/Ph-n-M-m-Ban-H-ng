@@ -31,7 +31,7 @@ router.get('/dashboard', auth, async (req, res) => {
 router.get('/revenue', auth, async (req, res) => {
   try {
     const { from, to, groupBy = 'day' } = req.query;
-    const where = { status: 'COMPLETED', ...(from && { createdAt: { gte: new Date(from) } }), ...(to && { createdAt: { lte: new Date(to) } }) };
+    const where = { status: 'COMPLETED', ...(from && { createdAt: { gte: new Date(from + 'T00:00:00+07:00') } }), ...(to && { createdAt: { lte: new Date(to + 'T23:59:59+07:00') } }) };
     const orders = await prisma.order.findMany({ where, select: { total: true, createdAt: true, channel: true } });
     res.json(orders);
   } catch (e) { res.status(500).json({ message: e.message }); }
