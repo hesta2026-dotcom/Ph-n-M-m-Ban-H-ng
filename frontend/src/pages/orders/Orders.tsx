@@ -37,8 +37,9 @@ const COLS: ColDef[] = [
 export default function Orders() {
   const qc = useQueryClient()
   const now = new Date()
-  const [from, setFrom] = useState(new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10))
-  const [to, setTo] = useState(now.toISOString().slice(0, 10))
+  const localDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const [from, setFrom] = useState(localDate(new Date(now.getFullYear(), now.getMonth(), 1)))
+  const [to, setTo] = useState(localDate(now))
   const [activePreset, setActivePreset] = useState('Tháng này')
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState('')
