@@ -4,7 +4,7 @@ import { X, Printer } from 'lucide-react'
 const fmt = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
 const payLabel: any = { CASH: 'Tiền mặt', CARD: 'Thẻ ngân hàng', TRANSFER: 'Chuyển khoản', DEBT: 'Ghi nợ', MIXED: 'Hỗn hợp' }
 
-interface Props { order: any; onClose: () => void }
+interface Props { order: any; onClose: () => void; onPrint?: () => void }
 
 export default function ExportSlip({ order, onClose }: Props) {
   const slipRef = useRef<HTMLDivElement>(null)
