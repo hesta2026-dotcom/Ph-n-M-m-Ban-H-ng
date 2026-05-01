@@ -187,6 +187,11 @@ export default function Expenses() {
           <tbody className="divide-y">
             {data?.data?.map((e: any) => (
               <tr key={e.id} className={`hover:bg-gray-50 ${selectedIds.has(e.id) ? 'bg-blue-50' : ''}`}>
+                <td className="px-3 py-3">
+                  <input type="checkbox" className="w-4 h-4 rounded cursor-pointer accent-blue-600"
+                    checked={selectedIds.has(e.id)}
+                    onChange={ev => setSelectedIds(prev => { const s = new Set(prev); ev.target.checked ? s.add(e.id) : s.delete(e.id); return s })} />
+                </td>
                 {visible.has('type') && <td className="px-4 py-3"><span className={`badge ${e.type === 'INCOME' ? 'badge-green' : 'badge-red'}`}>{e.type === 'INCOME' ? 'Thu' : 'Chi'}</span></td>}
                 {visible.has('category') && <td className="px-4 py-3">{e.category}</td>}
                 {visible.has('amount') && <td className={`px-4 py-3 font-semibold ${e.type === 'INCOME' ? 'text-green-600' : 'text-red-600'}`}>{fmt(e.amount)}</td>}
