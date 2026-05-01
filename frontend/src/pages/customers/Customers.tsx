@@ -36,6 +36,7 @@ export default function Customers() {
   const [viewCustomer, setViewCustomer] = useState<any>(null)
   const [viewOrder, setViewOrder] = useState<any>(null)
   const [visible, setVisible] = useState<Set<string>>(() => new Set(COLS.map(c => c.key)))
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const qc = useQueryClient()
 
   const { data, isLoading } = useQuery({
