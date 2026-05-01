@@ -261,6 +261,9 @@ export default function Orders() {
                     <div className="flex items-center gap-2">
                       <button title="Chi tiết" onClick={() => setSelected(o)} className="text-blue-500 hover:text-blue-700"><Eye size={16} /></button>
                       <button title="Phiếu xuất hàng" onClick={() => setSlipOrder(o)} className="text-gray-500 hover:text-gray-700"><FileText size={16} /></button>
+                      {(o.status === 'CANCELLED' || o.status === 'REFUNDED') && (
+                        <button title="Xóa đơn hàng" onClick={() => { if (confirm(`Xóa đơn hàng ${o.orderCode}?`)) delOrder(o.id) }} className="text-red-400 hover:text-red-600"><Trash2 size={15} /></button>
+                      )}
                     </div>
                   </td>
                 </tr>
