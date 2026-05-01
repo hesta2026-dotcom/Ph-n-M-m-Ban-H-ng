@@ -22,6 +22,12 @@ export default function Users() {
     onError: (e: any) => toast.error(e.response?.data?.message || 'Lỗi')
   })
 
+  const del = useMutation({
+    mutationFn: (id: string) => api.delete(`/users/${id}`),
+    onSuccess: () => { toast.success('Đã xóa nhân viên'); qc.invalidateQueries({ queryKey: ['users'] }) },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Không thể xóa')
+  })
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
