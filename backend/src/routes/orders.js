@@ -165,8 +165,8 @@ router.patch('/:id/warehouse-status', auth, async (req, res) => {
 
     const order = await prisma.order.findUnique({ where: { id: req.params.id } });
     if (!order) return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
-    if (order.status !== 'COMPLETED')
-      return res.status(400).json({ message: 'Chỉ cập nhật trạng thái xuất kho cho đơn đã hoàn thành' });
+    if (order.status === 'CANCELLED' || order.status === 'REFUNDED')
+      return res.status(400).json({ message: 'Không thể cập nhật trạng thái xuất kho cho đơn đã hủy hoặc hoàn hàng' });
 
     await prisma.$transaction(async (tx) => {
       // Cập nhật trạng thái xuất kho
