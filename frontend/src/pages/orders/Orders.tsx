@@ -202,6 +202,19 @@ export default function Orders() {
               {!isLoading && !data?.data?.length && <tr><td colSpan={visCols.length + 2} className="text-center py-10 text-gray-400">Không có đơn hàng nào</td></tr>}
               {data?.data?.map((o: any) => (
                 <tr key={o.id} className={`hover:bg-gray-50 ${selectedIds.has(o.id) ? 'bg-blue-50' : ''}`}>
+                  <td className="px-3 py-2">
+                    <input type="checkbox"
+                      className="w-4 h-4 rounded cursor-pointer accent-blue-600"
+                      checked={selectedIds.has(o.id)}
+                      onChange={e => {
+                        setSelectedIds(prev => {
+                          const s = new Set(prev)
+                          e.target.checked ? s.add(o.id) : s.delete(o.id)
+                          return s
+                        })
+                      }}
+                    />
+                  </td>
                   {visible.has('orderCode') && <td className="px-4 py-3 font-mono text-xs font-semibold text-blue-700">{o.orderCode}</td>}
                   {visible.has('customer') && (
                     <td className="px-4 py-3">
