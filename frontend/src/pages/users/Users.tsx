@@ -45,7 +45,12 @@ export default function Users() {
                 <td className="px-4 py-3 text-gray-500">{u.phone || '-'}</td>
                 <td className="px-4 py-3"><span className={`badge ${roleClass[u.role]}`}>{roleLabel[u.role]}</span></td>
                 <td className="px-4 py-3"><span className={`badge ${u.isActive ? 'badge-green' : 'badge-red'}`}>{u.isActive ? 'Đang hoạt động' : 'Đã khóa'}</span></td>
-                <td className="px-4 py-3"><button onClick={() => { setEditing(u); setForm({ name: u.name, email: u.email, password: '', role: u.role, phone: u.phone || '' }); setShowForm(true) }} className="text-blue-500 hover:text-blue-700"><Edit2 size={15} /></button></td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => { setEditing(u); setForm({ name: u.name, email: u.email, password: '', role: u.role, phone: u.phone || '' }); setShowForm(true) }} className="text-blue-500 hover:text-blue-700"><Edit2 size={15} /></button>
+                    <button onClick={() => { if (confirm(`Xóa nhân viên "${u.name}"?`)) del.mutate(u.id) }} className="text-red-400 hover:text-red-600"><Trash2 size={15} /></button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
