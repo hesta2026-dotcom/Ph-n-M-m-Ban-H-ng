@@ -529,14 +529,27 @@ export default function Stock() {
       {tab === 'purchase' && (
         <div className="card p-0 overflow-hidden">
           <div className="px-5 py-3 border-b flex items-center justify-between flex-wrap gap-2">
-            <span className="text-sm font-medium text-gray-600">Danh sách phiếu nhập</span>
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-sm font-medium text-gray-600">Danh sách phiếu nhập</span>
+              <div className="relative">
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input className="input pl-8 py-1.5 text-sm w-52"
+                  placeholder="Tìm mã phiếu, nhà cung cấp..."
+                  value={searchPurchase} onChange={e => { setSearchPurchase(e.target.value); setSelectedPurchaseIds(new Set()) }} />
+              </div>
+              {selectedPurchaseIds.size > 0 && (
+                <>
+                  <span className="text-sm text-blue-600 font-medium">Đã chọn {selectedPurchaseIds.size}</span>
+                  <button onClick={() => setSelectedPurchaseIds(new Set())} className="text-xs text-gray-400 hover:text-gray-600 underline">Bỏ chọn</button>
+                </>
+              )}
+            </div>
             <div className="flex gap-2 items-center">
               <ColumnPicker cols={COLS_PURCHASE} visible={visPurchase} onChange={setVisPurchase} />
               <button onClick={() => {
                 const sLabel: any = { COMPLETED: 'Hoàn thành', CANCELLED: 'Đã hủy', PENDING: 'Chờ xử lý' }
                 const vc = COLS_PURCHASE.filter(c => visPurchase.has(c.key))
-                const headers = vc.map(c => c.label)
-                const rows = (purchases?.data || []).map((p: any) => vc.map(c => {
+                const rows = exportPurchases.map((p: any) => vc.map(c => {
                   switch (c.key) {
                     case 'code': return p.code
                     case 'supplier': return p.supplier?.name || ''
@@ -548,15 +561,14 @@ export default function Stock() {
                     default: return ''
                   }
                 }))
-                exportExcel(`Phieu-nhap_${from}_${to}`, 'Phieu nhap', headers, rows)
-              }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-medium hover:bg-green-700">
-                <FileSpreadsheet size={13} /> Excel
+                exportExcel(`Phieu-nhap_${from}_${to}`, 'Phieu nhap', vc.map(c => c.label), rows)
+              }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium ${selectedPurchaseIds.size > 0 ? 'bg-green-700' : 'bg-green-600 hover:bg-green-700'}`}>
+                <FileSpreadsheet size={13} /> {selectedPurchaseIds.size > 0 ? `Excel (${selectedPurchaseIds.size})` : 'Excel'}
               </button>
               <button onClick={() => {
                 const sLabel: any = { COMPLETED: 'Hoàn thành', CANCELLED: 'Đã hủy', PENDING: 'Chờ xử lý' }
                 const vc = COLS_PURCHASE.filter(c => visPurchase.has(c.key))
-                const headers = vc.map(c => c.label)
-                const rows = (purchases?.data || []).map((p: any) => vc.map(c => {
+                const rows = exportPurchases.map((p: any) => vc.map(c => {
                   switch (c.key) {
                     case 'code': return p.code
                     case 'supplier': return p.supplier?.name || ''
@@ -568,9 +580,9 @@ export default function Stock() {
                     default: return ''
                   }
                 }))
-                exportPDF(`Phieu-nhap_${from}_${to}`, 'Danh sach phieu nhap hang', fmtPeriod(from, to), headers, rows)
-              }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-medium hover:bg-red-700">
-                <FileText size={13} /> PDF
+                exportPDF(`Phieu-nhap_${from}_${to}`, 'Danh sach phieu nhap hang', fmtPeriod(from, to), vc.map(c => c.label), rows)
+              }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium ${selectedPurchaseIds.size > 0 ? 'bg-red-700' : 'bg-red-600 hover:bg-red-700'}`}>
+                <FileText size={13} /> {selectedPurchaseIds.size > 0 ? `PDF (${selectedPurchaseIds.size})` : 'PDF'}
               </button>
             </div>
           </div>
@@ -578,14 +590,32 @@ export default function Stock() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b">
                 <tr>
+                  <th className="px-3 py-3 w-10">
+                    <input type="checkbox" className="w-4 h-4 rounded cursor-pointer accent-blue-600"
+                      checked={filteredPurchases.length > 0 && filteredPurchases.every((p: any) => selectedPurchaseIds.has(p.id))}
+                      onChange={e => {
+                        const ids = filteredPurchases.map((p: any) => p.id)
+                        if (e.target.checked) setSelectedPurchaseIds(prev => new Set([...prev, ...ids]))
+                        else setSelectedPurchaseIds(prev => { const s = new Set(prev); ids.forEach((id: string) => s.delete(id)); return s })
+                      }}
+                    />
+                  </th>
                   {COLS_PURCHASE.filter(c => visPurchase.has(c.key)).map(c => (
                     <th key={c.key} className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">{c.label}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {purchases?.data?.map((p: any) => (
-                  <tr key={p.id} className="hover:bg-gray-50">
+                {filteredPurchases.map((p: any) => (
+                  <tr key={p.id} className={`hover:bg-gray-50 ${selectedPurchaseIds.has(p.id) ? 'bg-blue-50' : ''}`}>
+                    <td className="px-3 py-2">
+                      <input type="checkbox" className="w-4 h-4 rounded cursor-pointer accent-blue-600"
+                        checked={selectedPurchaseIds.has(p.id)}
+                        onChange={e => setSelectedPurchaseIds(prev => {
+                          const s = new Set(prev); e.target.checked ? s.add(p.id) : s.delete(p.id); return s
+                        })}
+                      />
+                    </td>
                     {visPurchase.has('code') && (
                       <td className="px-4 py-3">
                         <button onClick={() => setViewPurchase(p)} className="font-mono text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline">
@@ -607,7 +637,11 @@ export default function Stock() {
                     {visPurchase.has('createdAt') && <td className="px-4 py-3 text-gray-400 whitespace-nowrap text-xs">{new Date(p.createdAt).toLocaleString('vi-VN')}</td>}
                   </tr>
                 ))}
-                {!purchases?.data?.length && <tr><td colSpan={COLS_PURCHASE.filter(c => visPurchase.has(c.key)).length} className="text-center py-10 text-gray-400">Chưa có phiếu nhập</td></tr>}
+                {!filteredPurchases.length && (
+                  <tr><td colSpan={COLS_PURCHASE.filter(c => visPurchase.has(c.key)).length + 1} className="text-center py-10 text-gray-400">
+                    {searchPurchase ? 'Không tìm thấy kết quả' : 'Chưa có phiếu nhập'}
+                  </td></tr>
+                )}
               </tbody>
             </table>
           </div>
