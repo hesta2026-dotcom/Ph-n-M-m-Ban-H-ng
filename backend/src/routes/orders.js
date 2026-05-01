@@ -163,53 +163,69 @@ router.patch('/:id/warehouse-status', auth, async (req, res) => {
     if (!allowed.includes(warehouseStatus))
       return res.status(400).json({ message: 'Trạng thái không hợp lệ' });
 
-    const order = await prisma.order.findUnique({ where: { id: req.params.id } });
+    const order = await prisma.order.findUnique({
+      where: { id: req.params.id },
+      include: { items: true }
+    });
     if (!order) return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
     if (order.status === 'CANCELLED' || order.status === 'REFUNDED')
       return res.status(400).json({ message: 'Không thể cập nhật trạng thái xuất kho cho đơn đã hủy hoặc hoàn hàng' });
 
     await prisma.$transaction(async (tx) => {
-      // Cập nhật trạng thái xuất kho
-      await tx.order.update({ where: { id: order.id }, data: { warehouseStatus } });
+      const updateData = { warehouseStatus };
 
-      // Khi xác nhận ĐÃ XUẤT → đẩy vào Công Nợ phải thu khách hàng
+      // Khi ĐÃ XUẤT và đơn đang PENDING → tự động hoàn thành đơn hàng
+      if (warehouseStatus === 'EXPORTED' && order.status === 'PENDING') {
+        updateData.status = 'COMPLETED';
+
+        // Trừ kho và ghi log
+        for (const item of order.items) {
+          const product = await tx.product.findUnique({ where: { id: item.productId } });
+          await tx.product.update({ where: { id: item.productId }, data: { stock: { decrement: item.qty } } });
+          await tx.stockLog.create({
+            data: {
+              productId: item.productId, type: 'EXPORT', qty: item.qty,
+              before: product.stock, after: product.stock - item.qty,
+              note: `Xuất kho - ${order.orderCode}`
+            }
+          });
+        }
+
+        // Cộng điểm và tổng chi cho khách hàng
+        if (order.customerId) {
+          await tx.customer.update({
+            where: { id: order.customerId },
+            data: { totalSpent: { increment: order.total }, points: { increment: Math.floor(order.total / 1000) } }
+          });
+        }
+      }
+
+      await tx.order.update({ where: { id: order.id }, data: updateData });
+
+      // Khi ĐÃ XUẤT → tạo/cập nhật công nợ phải thu
       if (warehouseStatus === 'EXPORTED' && order.customerId) {
         const exportNote = `Xuất kho ${new Date().toLocaleString('vi-VN')} - ${order.orderCode}`;
         const remaining = order.total - (order.amountPaid || 0);
-
         const existingDebt = await tx.debt.findUnique({ where: { orderId: order.id } });
 
         if (!existingDebt) {
-          // Tạo mới công nợ phải thu
           await tx.debt.create({
             data: {
-              type: 'CUSTOMER',
-              customerId: order.customerId,
-              orderId: order.id,
-              amount: order.total,
-              paid: order.amountPaid || 0,
+              type: 'CUSTOMER', customerId: order.customerId, orderId: order.id,
+              amount: order.total, paid: order.amountPaid || 0,
               remaining: remaining > 0 ? remaining : 0,
               status: remaining <= 0 ? 'PAID' : 'UNPAID',
               note: exportNote,
             }
           });
-          // Cộng công nợ vào hồ sơ khách hàng
           if (remaining > 0) {
-            await tx.customer.update({
-              where: { id: order.customerId },
-              data: { debt: { increment: remaining } }
-            });
+            await tx.customer.update({ where: { id: order.customerId }, data: { debt: { increment: remaining } } });
           }
         } else {
-          // Cập nhật ghi chú thêm thông tin xuất kho
-          await tx.debt.update({
-            where: { id: existingDebt.id },
-            data: { note: exportNote }
-          });
+          await tx.debt.update({ where: { id: existingDebt.id }, data: { note: exportNote } });
         }
       }
 
-      // Khi chuyển từ EXPORTED về trạng thái khác — không xóa debt (đã xuất thực tế)
       await tx.auditLog.create({
         data: { userId: req.user.id, action: `WAREHOUSE_${warehouseStatus}`, entity: 'Order', entityId: order.id }
       });
