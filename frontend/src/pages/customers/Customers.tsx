@@ -62,6 +62,15 @@ export default function Customers() {
     onError: (e: any) => toast.error(e.response?.data?.message || 'Không thể xóa')
   })
 
+  const delBulk = async () => {
+    if (!confirm(`Xóa ${selectedIds.size} khách hàng đã chọn?`)) return
+    const results = await Promise.allSettled([...selectedIds].map(id => api.delete(`/customers/${id}`)))
+    const ok = results.filter(r => r.status === 'fulfilled').length
+    const fail = results.length - ok
+    if (ok > 0) { toast.success(`Đã xóa ${ok} khách hàng`); qc.invalidateQueries({ queryKey: ['customers'] }); setSelectedIds(new Set()) }
+    if (fail > 0) toast.error(`${fail} khách hàng không thể xóa (còn đơn hàng)`)
+  }
+
   const totalOrderCount = customerOrders?.length ?? 0
   const totalSpent = customerOrders?.filter((o: any) => o.status === 'COMPLETED').reduce((s: number, o: any) => s + o.total, 0) ?? 0
 
