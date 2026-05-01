@@ -149,6 +149,14 @@ export default function Expenses() {
           ))}
         </div>
         <div className="flex gap-2 items-center">
+          {selectedIds.size > 0 && (
+            <>
+              <button onClick={delBulk} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700">
+                <Trash2 size={14} /> Xóa ({selectedIds.size})
+              </button>
+              <button onClick={() => setSelectedIds(new Set())} className="text-xs text-gray-400 hover:text-gray-600 underline">Bỏ chọn</button>
+            </>
+          )}
           <ColumnPicker cols={COLS} visible={visible} onChange={setVisible} />
           <button onClick={handleExcel} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700">
             <FileSpreadsheet size={15} /> Excel
