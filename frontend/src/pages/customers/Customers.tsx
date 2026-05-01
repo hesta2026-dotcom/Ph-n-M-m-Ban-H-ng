@@ -163,8 +163,12 @@ export default function Customers() {
                   </td>
                 )}
                 <td className="px-4 py-3">
-                  <button onClick={() => { setEditing(c); setForm({ name: c.name, phone: c.phone || '', email: c.email || '', address: c.address || '' }); setShowForm(true) }}
-                    className="text-blue-500 hover:text-blue-700"><Edit2 size={15} /></button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => { setEditing(c); setForm({ name: c.name, phone: c.phone || '', email: c.email || '', address: c.address || '' }); setShowForm(true) }}
+                      className="text-blue-500 hover:text-blue-700"><Edit2 size={15} /></button>
+                    <button onClick={() => { if (confirm(`Xóa khách hàng "${c.name}"?`)) del.mutate(c.id) }}
+                      className="text-red-400 hover:text-red-600"><Trash2 size={15} /></button>
+                  </div>
                 </td>
               </tr>
             ))}
