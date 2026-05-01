@@ -54,9 +54,16 @@ const COLS_EXPORT: ColDef[] = [
   { key: 'itemCount', label: 'Số SP' },
   { key: 'total', label: 'Tổng tiền' },
   { key: 'paymentMethod', label: 'Thanh toán' },
+  { key: 'warehouseStatus', label: 'Trạng thái xuất kho' },
   { key: 'user', label: 'Nhân viên' },
   { key: 'createdAt', label: 'Ngày xuất' },
 ]
+
+const WH_STATUS: Record<string, { label: string; cls: string; next: string; nextLabel: string }> = {
+  PENDING:   { label: 'Chờ xuất',   cls: 'badge-yellow', next: 'EXPORTING', nextLabel: 'Bắt đầu xuất' },
+  EXPORTING: { label: 'Đang xuất',  cls: 'badge-blue',   next: 'EXPORTED',  nextLabel: 'Xác nhận đã xuất' },
+  EXPORTED:  { label: 'Đã xuất kho', cls: 'badge-green', next: 'PENDING',   nextLabel: 'Reset' },
+}
 
 function ProductThumb({ product, size = 'sm' }: { product: any; size?: 'sm' | 'md' }) {
   const imgs: string[] = product?.images ? JSON.parse(product.images) : []
