@@ -344,7 +344,17 @@ export default function Orders() {
       )}
 
       {showCreate && <CreateOrderModal onClose={() => setShowCreate(false)} onSuccess={(order) => { setShowCreate(false); setSelected(order) }} />}
-      {slipOrder && <ExportSlip order={slipOrder} onClose={() => setSlipOrder(null)} />}
+      {slipOrder && (
+        <ExportSlip
+          order={slipOrder}
+          onClose={() => setSlipOrder(null)}
+          onPrint={() => {
+            if ((slipOrder.warehouseStatus || 'PENDING') !== 'EXPORTED') {
+              updateWhStatus({ id: slipOrder.id, warehouseStatus: 'EXPORTED' })
+            }
+          }}
+        />
+      )}
     </div>
   )
 }
