@@ -1276,6 +1276,15 @@ export default function Stock() {
                   win.document.close()
                   win.focus()
                   setTimeout(() => win.print(), 300)
+                  const toExport = selectedExportOrders.filter((o: any) => (o.warehouseStatus || 'PENDING') !== 'EXPORTED')
+                  if (toExport.length > 0) {
+                    Promise.all(
+                      toExport.map((o: any) => api.patch(`/orders/${o.id}/warehouse-status`, { warehouseStatus: 'EXPORTED' }))
+                    ).then(() => {
+                      toast.success(`Đã xuất kho ${toExport.length} đơn hàng`)
+                      qc.invalidateQueries({ queryKey: ['export-orders'] })
+                    }).catch(() => toast.error('Lỗi cập nhật trạng thái xuất kho'))
+                  }
                 }} className="btn-primary flex items-center gap-2 py-2">
                   <Printer size={15} /> In phiếu
                 </button>
