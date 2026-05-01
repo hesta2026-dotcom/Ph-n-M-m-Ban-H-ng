@@ -81,8 +81,6 @@ router.delete('/:id', auth, async (req, res) => {
   try {
     const order = await prisma.order.findUnique({ where: { id: req.params.id } });
     if (!order) return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
-    if (!['CANCELLED', 'REFUNDED'].includes(order.status))
-      return res.status(400).json({ message: 'Chỉ có thể xóa đơn hàng đã hủy hoặc hoàn hàng' });
     await prisma.order.delete({ where: { id: req.params.id } });
     res.json({ message: 'Đã xóa' });
   } catch (e) { res.status(500).json({ message: e.message }); }
