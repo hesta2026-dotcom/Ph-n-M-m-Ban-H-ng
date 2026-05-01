@@ -145,6 +145,11 @@ export default function Stock() {
     queryKey: ['products-all'],
     queryFn: () => api.get('/products?limit=1000').then(r => r.data.data)
   })
+  const { data: exportOrders } = useQuery({
+    queryKey: ['export-orders', from, to],
+    queryFn: () => api.get(`/orders?status=COMPLETED&from=${from}&to=${to}&limit=500`).then(r => r.data),
+    enabled: tab === 'export'
+  })
   const { data: suppliers } = useQuery({
     queryKey: ['suppliers'],
     queryFn: () => api.get('/suppliers').then(r => r.data)
