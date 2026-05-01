@@ -717,17 +717,31 @@ export default function Stock() {
       {tab === 'export' && (
         <div className="card p-0 overflow-hidden">
           <div className="px-5 py-3 border-b flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-sm font-medium text-gray-600">Danh sách phiếu xuất hàng</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-medium text-gray-600 whitespace-nowrap">Phiếu xuất hàng</span>
+              {/* Lọc nhanh theo trạng thái xuất kho */}
+              <div className="flex gap-1">
+                {[['', 'Tất cả'], ['PENDING', 'Chờ xuất'], ['EXPORTING', 'Đang xuất'], ['EXPORTED', 'Đã xuất']].map(([val, label]) => (
+                  <button key={val} onClick={() => { setFilterWhStatus(val); setSelectedExportIds(new Set()) }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${filterWhStatus === val ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}>
+                    {label}
+                    {val && (
+                      <span className="ml-1 font-bold">
+                        {(exportOrders?.data || []).filter((o: any) => (o.warehouseStatus || 'PENDING') === val).length}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
               <div className="relative">
                 <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input className="input pl-8 py-1.5 text-sm w-60"
-                  placeholder="Tìm mã đơn, khách hàng, NV..."
+                <input className="input pl-8 py-1.5 text-sm w-52"
+                  placeholder="Tìm mã đơn, khách hàng..."
                   value={searchExport} onChange={e => { setSearchExport(e.target.value); setSelectedExportIds(new Set()) }} />
               </div>
               {selectedExportIds.size > 0 && (
                 <>
-                  <span className="text-sm text-blue-600 font-medium">Đã chọn {selectedExportIds.size} đơn</span>
+                  <span className="text-sm text-blue-600 font-medium whitespace-nowrap">Đã chọn {selectedExportIds.size} đơn</span>
                   <button onClick={() => setSelectedExportIds(new Set())} className="text-xs text-gray-400 hover:text-gray-600 underline">Bỏ chọn</button>
                 </>
               )}
