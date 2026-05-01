@@ -168,13 +168,56 @@ router.patch('/:id/warehouse-status', auth, async (req, res) => {
     if (order.status !== 'COMPLETED')
       return res.status(400).json({ message: 'Chỉ cập nhật trạng thái xuất kho cho đơn đã hoàn thành' });
 
-    const updated = await prisma.order.update({
-      where: { id: req.params.id },
-      data: { warehouseStatus },
-      include: { customer: true, user: { select: { id: true, name: true } } }
+    await prisma.$transaction(async (tx) => {
+      // Cập nhật trạng thái xuất kho
+      await tx.order.update({ where: { id: order.id }, data: { warehouseStatus } });
+
+      // Khi xác nhận ĐÃ XUẤT → đẩy vào Công Nợ phải thu khách hàng
+      if (warehouseStatus === 'EXPORTED' && order.customerId) {
+        const exportNote = `Xuất kho ${new Date().toLocaleString('vi-VN')} - ${order.orderCode}`;
+        const remaining = order.total - (order.amountPaid || 0);
+
+        const existingDebt = await tx.debt.findUnique({ where: { orderId: order.id } });
+
+        if (!existingDebt) {
+          // Tạo mới công nợ phải thu
+          await tx.debt.create({
+            data: {
+              type: 'CUSTOMER',
+              customerId: order.customerId,
+              orderId: order.id,
+              amount: order.total,
+              paid: order.amountPaid || 0,
+              remaining: remaining > 0 ? remaining : 0,
+              status: remaining <= 0 ? 'PAID' : 'UNPAID',
+              note: exportNote,
+            }
+          });
+          // Cộng công nợ vào hồ sơ khách hàng
+          if (remaining > 0) {
+            await tx.customer.update({
+              where: { id: order.customerId },
+              data: { debt: { increment: remaining } }
+            });
+          }
+        } else {
+          // Cập nhật ghi chú thêm thông tin xuất kho
+          await tx.debt.update({
+            where: { id: existingDebt.id },
+            data: { note: exportNote }
+          });
+        }
+      }
+
+      // Khi chuyển từ EXPORTED về trạng thái khác — không xóa debt (đã xuất thực tế)
+      await tx.auditLog.create({
+        data: { userId: req.user.id, action: `WAREHOUSE_${warehouseStatus}`, entity: 'Order', entityId: order.id }
+      });
     });
-    await prisma.auditLog.create({
-      data: { userId: req.user.id, action: `WAREHOUSE_${warehouseStatus}`, entity: 'Order', entityId: order.id }
+
+    const updated = await prisma.order.findUnique({
+      where: { id: order.id },
+      include: { customer: true, user: { select: { id: true, name: true } } }
     });
     res.json(updated);
   } catch (e) { res.status(500).json({ message: e.message }); }
