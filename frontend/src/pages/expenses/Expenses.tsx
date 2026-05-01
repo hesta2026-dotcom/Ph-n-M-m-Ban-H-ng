@@ -204,7 +204,7 @@ export default function Expenses() {
                 </td>
               </tr>
             ))}
-            {!data?.data?.length && <tr><td colSpan={visCols.length + 1} className="text-center py-10 text-gray-400">Không có dữ liệu</td></tr>}
+            {!data?.data?.length && <tr><td colSpan={visCols.length + 2} className="text-center py-10 text-gray-400">Không có dữ liệu</td></tr>}
           </tbody>
         </table>
       </div>
