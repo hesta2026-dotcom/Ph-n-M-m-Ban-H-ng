@@ -40,7 +40,7 @@ router.get('/revenue', auth, async (req, res) => {
 router.get('/top-products', auth, async (req, res) => {
   try {
     const { from, to, limit = 10 } = req.query;
-    const where = { order: { status: 'COMPLETED', ...(from && { createdAt: { gte: new Date(from) } }), ...(to && { createdAt: { lte: new Date(to) } }) } };
+    const where = { order: { status: 'COMPLETED', ...(from && { createdAt: { gte: new Date(from + 'T00:00:00+07:00') } }), ...(to && { createdAt: { lte: new Date(to + 'T23:59:59+07:00') } }) } };
     const items = await prisma.orderItem.groupBy({ by: ['productId'], where, _sum: { qty: true, total: true }, orderBy: { _sum: { total: 'desc' } }, take: +limit });
     const productIds = items.map(i => i.productId);
     const products = await prisma.product.findMany({ where: { id: { in: productIds } } });
