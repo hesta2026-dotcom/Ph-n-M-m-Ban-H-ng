@@ -93,15 +93,19 @@ export default function Orders() {
 
   const visCols = COLS.filter(c => visible.has(c.key))
 
+  const exportData = selectedIds.size > 0
+    ? (data?.data || []).filter((o: any) => selectedIds.has(o.id))
+    : (data?.data || [])
+
   const handleExcel = () => {
     const headers = visCols.map(c => c.label)
-    const rows = (data?.data || []).map((o: any) => visCols.map(c => getVal(o, c.key)))
+    const rows = exportData.map((o: any) => visCols.map(c => getVal(o, c.key)))
     exportExcel(`Don-hang_${from}_${to}`, 'Don hang', headers, rows)
   }
 
   const handlePDF = () => {
     const headers = visCols.map(c => c.label)
-    const rows = (data?.data || []).map((o: any) => visCols.map(c =>
+    const rows = exportData.map((o: any) => visCols.map(c =>
       c.key === 'total' ? fmt(o.total) : getVal(o, c.key)
     ))
     exportPDF(`Don-hang_${from}_${to}`, 'Danh sach don hang', fmtPeriod(from, to), headers, rows)
