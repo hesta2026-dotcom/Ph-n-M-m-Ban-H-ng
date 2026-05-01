@@ -1155,6 +1155,251 @@ export default function Stock() {
           }}
         />
       )}
+
+      {/* ==================== Modal Phiếu xuất ==================== */}
+      {exportSlipMode && selectedExportOrders.length > 0 && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[92vh] flex flex-col">
+            {/* Toolbar */}
+            <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
+              <div>
+                <h2 className="font-bold text-gray-800 text-lg">
+                  {exportSlipMode === 'total' ? 'Phiếu xuất tổng hợp' : 'Phiếu xuất chi tiết'}
+                </h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {selectedExportOrders.length} đơn hàng · {fmtPeriod(from, to)}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1.5">
+                  <button onClick={() => setExportSlipMode('total')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${exportSlipMode === 'total' ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 hover:bg-gray-50'}`}>
+                    Xuất tổng
+                  </button>
+                  <button onClick={() => setExportSlipMode('detail')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${exportSlipMode === 'detail' ? 'bg-indigo-600 text-white border-indigo-600' : 'border-gray-300 hover:bg-gray-50'}`}>
+                    Xuất chi tiết
+                  </button>
+                </div>
+                <button onClick={() => {
+                  const content = exportSlipRef.current?.innerHTML
+                  if (!content) return
+                  const title = exportSlipMode === 'total' ? 'PHIẾU XUẤT TỔNG HỢP' : 'PHIẾU XUẤT CHI TIẾT'
+                  const win = window.open('', '_blank', 'width=900,height=1000')
+                  if (!win) return
+                  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/>
+                    <title>${title}</title>
+                    <style>
+                      *{margin:0;padding:0;box-sizing:border-box}
+                      body{font-family:Arial,sans-serif;font-size:13px;color:#111;padding:20px}
+                      h1{font-size:20px;font-weight:bold;text-align:center;letter-spacing:1px}
+                      h2{font-size:13px;font-weight:normal;color:#555;text-align:center;margin-top:3px}
+                      .divider{border-bottom:2px solid #111;margin:10px 0 14px}
+                      .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;font-size:12px}
+                      .info-row{display:flex;gap:6px}.label{color:#666}.value{font-weight:600}
+                      table{width:100%;border-collapse:collapse;margin-bottom:14px}
+                      th{background:#f3f4f6;padding:7px 8px;text-align:left;font-weight:600;border:1px solid #d1d5db;font-size:11px}
+                      td{padding:6px 8px;border:1px solid #e5e7eb;font-size:11px}
+                      tr:nth-child(even) td{background:#f9fafb}
+                      .right{text-align:right}.center{text-align:center}
+                      .total-box{margin-left:auto;width:260px;font-size:12px}
+                      .total-row{display:flex;justify-content:space-between;padding:3px 0}
+                      .grand{border-top:2px solid #111;padding-top:6px;margin-top:3px;font-size:14px;font-weight:bold}
+                      .order-section{border:1px solid #ddd;border-radius:6px;padding:12px;margin-bottom:16px;page-break-inside:avoid}
+                      .order-header{background:#f8faff;padding:8px 10px;border-radius:4px;margin-bottom:8px;font-size:12px}
+                      .sigs{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:36px}
+                      .sig{text-align:center}.sig-title{font-weight:600;font-size:12px}
+                      .sig-note{font-size:10px;color:#888}.sig-line{border-top:1px dashed #aaa;margin-top:44px;padding-top:3px;font-size:11px;color:#666}
+                      .badge{display:inline-block;padding:2px 7px;border-radius:9999px;font-size:10px;font-weight:600}
+                      .badge-green{background:#dcfce7;color:#166534}.badge-blue{background:#dbeafe;color:#1e40af}
+                      @media print{body{padding:10px}.order-section{page-break-inside:avoid}}
+                    </style></head><body>${content}</body></html>`)
+                  win.document.close()
+                  win.focus()
+                  setTimeout(() => win.print(), 300)
+                }} className="btn-primary flex items-center gap-2 py-2">
+                  <Printer size={15} /> In phiếu
+                </button>
+                <button onClick={() => setExportSlipMode(null)} className="text-gray-400 hover:text-gray-600 ml-1"><X size={20} /></button>
+              </div>
+            </div>
+
+            {/* Preview */}
+            <div className="overflow-y-auto p-6">
+              <div ref={exportSlipRef} className="font-sans text-sm text-gray-900">
+
+                {/* ── Xuất tổng ── */}
+                {exportSlipMode === 'total' && (
+                  <>
+                    <h1 className="text-xl font-bold text-center tracking-wide">PHIẾU XUẤT TỔNG HỢP</h1>
+                    <h2 className="text-sm text-gray-500 text-center mt-1">Hesta Distribution</h2>
+                    <div className="divider border-b-2 border-gray-900 my-3" />
+                    <div className="info-grid grid grid-cols-2 gap-2 mb-4 text-sm">
+                      <div className="info-row flex gap-2"><span className="label text-gray-500">Ngày xuất:</span><span className="value font-semibold">{new Date().toLocaleString('vi-VN')}</span></div>
+                      <div className="info-row flex gap-2"><span className="label text-gray-500">Số đơn hàng:</span><span className="value font-semibold">{selectedExportOrders.length} đơn</span></div>
+                      <div className="info-row flex gap-2 col-span-2"><span className="label text-gray-500">Mã đơn:</span>
+                        <span className="value font-mono text-xs">{selectedExportOrders.map((o: any) => o.orderCode).join(', ')}</span>
+                      </div>
+                    </div>
+
+                    <table className="w-full border-collapse mb-4 text-xs">
+                      <thead>
+                        <tr className="bg-gray-100">
+                          {['STT', 'Mã SP', 'Tên sản phẩm', 'ĐVT', 'SL tổng'].map((h, i) => (
+                            <th key={h} className={`border border-gray-300 px-2 py-2 font-semibold ${i >= 3 ? 'text-center' : 'text-left'}`}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {mergedItemsForTotal.map(({ product, qty }, idx) => (
+                          <tr key={idx} className={idx % 2 === 1 ? 'bg-gray-50' : ''}>
+                            <td className="border border-gray-200 px-2 py-1.5 text-center">{idx + 1}</td>
+                            <td className="border border-gray-200 px-2 py-1.5 font-mono text-xs">{product?.code}</td>
+                            <td className="border border-gray-200 px-2 py-1.5">{product?.name}</td>
+                            <td className="border border-gray-200 px-2 py-1.5 text-center">{product?.unit || 'cái'}</td>
+                            <td className="border border-gray-200 px-2 py-1.5 text-center font-bold text-blue-700">{qty}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    <div className="total-box ml-auto w-64 text-sm space-y-1 mb-6">
+                      <div className="total-row flex justify-between">
+                        <span className="text-gray-500">Tổng loại sản phẩm:</span>
+                        <span className="font-semibold">{mergedItemsForTotal.length} loại</span>
+                      </div>
+                      <div className="total-row grand flex justify-between border-t-2 border-gray-900 pt-2 font-bold text-base">
+                        <span>Tổng số lượng:</span>
+                        <span className="text-blue-700">{mergedItemsForTotal.reduce((s, i) => s + i.qty, 0)}</span>
+                      </div>
+                      <div className="total-row flex justify-between border-t mt-1 pt-1">
+                        <span className="text-gray-500">Tổng giá trị:</span>
+                        <span className="font-bold text-blue-600">{fmt(selectedExportOrders.reduce((s: number, o: any) => s + o.total, 0))}</span>
+                      </div>
+                    </div>
+
+                    <div className="sigs grid grid-cols-2 gap-8 mt-10">
+                      <div className="sig text-center">
+                        <p className="sig-title font-semibold text-sm">Người lập phiếu</p>
+                        <p className="sig-note text-xs text-gray-400">(Ký, ghi rõ họ tên)</p>
+                        <div className="sig-line border-t border-dashed border-gray-400 mt-12 pt-1 text-xs text-gray-500">
+                          {selectedExportOrders[0]?.user?.name}
+                        </div>
+                      </div>
+                      <div className="sig text-center">
+                        <p className="sig-title font-semibold text-sm">Thủ kho</p>
+                        <p className="sig-note text-xs text-gray-400">(Ký, ghi rõ họ tên)</p>
+                        <div className="sig-line border-t border-dashed border-gray-400 mt-12 pt-1 text-xs text-gray-500" />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* ── Xuất chi tiết ── */}
+                {exportSlipMode === 'detail' && (
+                  <>
+                    <h1 className="text-xl font-bold text-center tracking-wide">PHIẾU XUẤT CHI TIẾT</h1>
+                    <h2 className="text-sm text-gray-500 text-center mt-1">Hesta Distribution</h2>
+                    <div className="divider border-b-2 border-gray-900 my-3" />
+
+                    {selectedExportOrders.map((o: any, oidx: number) => (
+                      <div key={o.id} className="order-section border border-gray-200 rounded-xl p-4 mb-5">
+                        <div className="order-header bg-blue-50 rounded-lg px-3 py-2 mb-3 flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-4 text-sm flex-wrap">
+                            <span className="font-mono font-bold text-blue-700">{o.orderCode}</span>
+                            <span className="text-gray-500">Khách: <strong>{o.customer?.name || 'Khách lẻ'}</strong>{o.customer?.phone ? ` (${o.customer.phone})` : ''}</span>
+                            <span className="text-gray-500">NV: <strong>{o.user?.name}</strong></span>
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-gray-400">
+                            <span>{new Date(o.createdAt).toLocaleString('vi-VN')}</span>
+                            <span className="badge badge-green">Hoàn thành</span>
+                          </div>
+                        </div>
+
+                        <table className="w-full border-collapse text-xs mb-3">
+                          <thead>
+                            <tr className="bg-gray-100">
+                              {['STT', 'Mã SP', 'Tên sản phẩm', 'ĐVT', 'SL', 'Đơn giá', 'Thành tiền'].map((h, i) => (
+                                <th key={h} className={`border border-gray-300 px-2 py-1.5 font-semibold ${i >= 4 ? 'text-right' : i === 3 ? 'text-center' : 'text-left'}`}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {o.items?.map((item: any, idx: number) => (
+                              <tr key={item.id} className={idx % 2 === 1 ? 'bg-gray-50' : ''}>
+                                <td className="border border-gray-200 px-2 py-1.5 text-center">{idx + 1}</td>
+                                <td className="border border-gray-200 px-2 py-1.5 font-mono text-xs">{item.product?.code}</td>
+                                <td className="border border-gray-200 px-2 py-1.5">{item.product?.name}</td>
+                                <td className="border border-gray-200 px-2 py-1.5 text-center">{item.unit || item.product?.unit || 'cái'}</td>
+                                <td className="border border-gray-200 px-2 py-1.5 text-right font-medium">{item.qty}</td>
+                                <td className="border border-gray-200 px-2 py-1.5 text-right">{fmt(item.price)}</td>
+                                <td className="border border-gray-200 px-2 py-1.5 text-right font-semibold text-blue-600">{fmt(item.total)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+
+                        <div className="total-box ml-auto w-56 text-xs space-y-1">
+                          {o.discount > 0 && (
+                            <div className="total-row flex justify-between text-red-500">
+                              <span>Giảm giá:</span><span>- {fmt(o.discount)}</span>
+                            </div>
+                          )}
+                          <div className="grand flex justify-between border-t border-gray-300 pt-1 font-bold text-sm">
+                            <span>Tổng cộng:</span>
+                            <span className="text-blue-600">{fmt(o.total)}</span>
+                          </div>
+                          <div className="total-row flex justify-between text-gray-500">
+                            <span>Thanh toán:</span><span>{PAY_LABEL[o.paymentMethod]}</span>
+                          </div>
+                        </div>
+
+                        {oidx < selectedExportOrders.length - 1 && (
+                          <div className="sigs grid grid-cols-2 gap-8 mt-8">
+                            <div className="sig text-center text-xs">
+                              <p className="font-semibold">Người lập phiếu</p>
+                              <p className="text-gray-400">(Ký, ghi rõ họ tên)</p>
+                              <div className="border-t border-dashed border-gray-400 mt-10 pt-1 text-gray-500">{o.user?.name}</div>
+                            </div>
+                            <div className="sig text-center text-xs">
+                              <p className="font-semibold">Người nhận hàng</p>
+                              <p className="text-gray-400">(Ký, ghi rõ họ tên)</p>
+                              <div className="border-t border-dashed border-gray-400 mt-10 pt-1 text-gray-500">{o.customer?.name || 'Khách lẻ'}</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Tổng kết cuối */}
+                    <div className="bg-blue-50 rounded-xl p-4 text-sm">
+                      <div className="flex justify-between font-bold text-base">
+                        <span>Tổng giá trị xuất ({selectedExportOrders.length} đơn):</span>
+                        <span className="text-blue-600">{fmt(selectedExportOrders.reduce((s: number, o: any) => s + o.total, 0))}</span>
+                      </div>
+                    </div>
+
+                    <div className="sigs grid grid-cols-2 gap-8 mt-10">
+                      <div className="sig text-center">
+                        <p className="sig-title font-semibold text-sm">Người lập phiếu</p>
+                        <p className="sig-note text-xs text-gray-400">(Ký, ghi rõ họ tên)</p>
+                        <div className="sig-line border-t border-dashed border-gray-400 mt-12 pt-1 text-xs text-gray-500">
+                          {selectedExportOrders[0]?.user?.name}
+                        </div>
+                      </div>
+                      <div className="sig text-center">
+                        <p className="sig-title font-semibold text-sm">Thủ kho xác nhận</p>
+                        <p className="sig-note text-xs text-gray-400">(Ký, ghi rõ họ tên)</p>
+                        <div className="sig-line border-t border-dashed border-gray-400 mt-12 pt-1 text-xs text-gray-500" />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
