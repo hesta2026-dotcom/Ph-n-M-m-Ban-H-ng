@@ -51,6 +51,7 @@ const COLS_PURCHASE: ColDef[] = [
 const COLS_EXPORT: ColDef[] = [
   { key: 'orderCode', label: 'Mã đơn hàng' },
   { key: 'customer', label: 'Khách hàng' },
+  { key: 'orderStatus', label: 'Trạng thái đơn' },
   { key: 'itemCount', label: 'Số SP' },
   { key: 'total', label: 'Tổng tiền' },
   { key: 'paymentMethod', label: 'Thanh toán' },
