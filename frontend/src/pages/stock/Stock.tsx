@@ -831,6 +831,23 @@ export default function Stock() {
                     {visExport.has('paymentMethod') && (
                       <td className="px-4 py-3"><span className="badge badge-green">{PAY_LABEL[o.paymentMethod]}</span></td>
                     )}
+                    {visExport.has('warehouseStatus') && (() => {
+                      const ws = WH_STATUS[o.warehouseStatus || 'PENDING']
+                      return (
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <span className={`badge ${ws.cls} whitespace-nowrap`}>{ws.label}</span>
+                            <button
+                              title={ws.nextLabel}
+                              disabled={updateWhStatus.isPending}
+                              onClick={() => updateWhStatus.mutate({ id: o.id, warehouseStatus: ws.next })}
+                              className="text-xs text-gray-400 hover:text-blue-600 underline underline-offset-2 whitespace-nowrap disabled:opacity-40">
+                              {ws.next !== 'PENDING' ? ws.nextLabel : '↺'}
+                            </button>
+                          </div>
+                        </td>
+                      )
+                    })()}
                     {visExport.has('user') && <td className="px-4 py-3 text-gray-500">{o.user?.name}</td>}
                     {visExport.has('createdAt') && <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{new Date(o.createdAt).toLocaleString('vi-VN')}</td>}
                   </tr>
