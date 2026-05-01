@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 router.get('/logs', auth, async (req, res) => {
   try {
     const { productId, type, from, to, page = 1, limit = 200 } = req.query;
-    const where = { ...(productId && { productId }), ...(type && { type }), ...(from || to ? { createdAt: { ...(from && { gte: new Date(from) }), ...(to && { lte: new Date(to + 'T23:59:59') }) } } : {}) };
+    const where = { ...(productId && { productId }), ...(type && { type }), ...(from || to ? { createdAt: { ...(from && { gte: new Date(from + 'T00:00:00+07:00') }), ...(to && { lte: new Date(to + 'T23:59:59+07:00') }) } } : {}) };
     const logs = await prisma.stockLog.findMany({ where, include: { product: true }, skip: (page - 1) * limit, take: +limit, orderBy: { createdAt: 'desc' } });
     res.json(logs);
   } catch (e) { res.status(500).json({ message: e.message }); }
