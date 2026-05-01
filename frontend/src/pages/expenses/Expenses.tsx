@@ -66,6 +66,15 @@ export default function Expenses() {
     onError: (e: any) => toast.error(e.response?.data?.message || 'Không thể xóa')
   })
 
+  const delBulk = async () => {
+    if (!confirm(`Xóa ${selectedIds.size} bản ghi đã chọn?`)) return
+    await Promise.all([...selectedIds].map(id => api.delete(`/expenses/${id}`)))
+    toast.success(`Đã xóa ${selectedIds.size} bản ghi`)
+    setSelectedIds(new Set())
+    qc.invalidateQueries({ queryKey: ['expenses'] })
+    qc.invalidateQueries({ queryKey: ['cashflow'] })
+  }
+
   const getVal = (e: any, key: string) => {
     switch (key) {
       case 'type': return e.type === 'INCOME' ? 'Thu' : 'Chi'
