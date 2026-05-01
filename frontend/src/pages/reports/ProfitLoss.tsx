@@ -278,6 +278,140 @@ export default function ProfitLoss() {
           )}
         </>
       )}
+
+      {detailType && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-start justify-center p-4 pt-16 overflow-y-auto" onClick={e => { if (e.target === e.currentTarget) setDetailType(null) }}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl mb-8">
+            <div className="flex items-center justify-between px-6 py-4 border-b">
+              <h2 className="font-bold text-gray-900 text-lg">
+                {detailType === 'revenue' && 'Chi tiết Doanh thu'}
+                {detailType === 'cogs' && 'Chi tiết Giá vốn hàng bán'}
+                {detailType === 'expenses' && 'Chi tiết Chi phí hoạt động'}
+                {detailType === 'income' && 'Chi tiết Thu nhập khác'}
+              </h2>
+              <button onClick={() => setDetailType(null)} className="p-1.5 hover:bg-gray-100 rounded-lg"><X size={18} /></button>
+            </div>
+            <div className="p-6 overflow-x-auto max-h-[70vh] overflow-y-auto">
+              {(detailType === 'revenue' || detailType === 'cogs') && (
+                loadingOrders
+                  ? <div className="text-center py-12 text-gray-400">Đang tải...</div>
+                  : detailType === 'revenue'
+                    ? (
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 sticky top-0">
+                          <tr>
+                            <th className="px-3 py-2 text-left text-gray-600 font-medium">Mã đơn</th>
+                            <th className="px-3 py-2 text-left text-gray-600 font-medium">Khách hàng</th>
+                            <th className="px-3 py-2 text-left text-gray-600 font-medium">Sản phẩm</th>
+                            <th className="px-3 py-2 text-left text-gray-600 font-medium">Thanh toán</th>
+                            <th className="px-3 py-2 text-right text-gray-600 font-medium">Doanh thu</th>
+                            <th className="px-3 py-2 text-left text-gray-600 font-medium">Ngày</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {(detailOrders?.data || []).map((o: any) => (
+                            <tr key={o.id} className="hover:bg-gray-50">
+                              <td className="px-3 py-2 font-mono text-xs text-blue-600">{o.orderCode}</td>
+                              <td className="px-3 py-2">
+                                <div className="font-medium text-gray-800">{o.customer?.name || 'Khách lẻ'}</div>
+                                {o.customer?.phone && <div className="text-xs text-gray-400">{o.customer.phone}</div>}
+                              </td>
+                              <td className="px-3 py-2 text-gray-500 text-xs max-w-xs truncate">{(o.items || []).map((it: any) => `${it.product?.name || '?'} x${it.qty}`).join(', ')}</td>
+                              <td className="px-3 py-2 text-xs text-gray-500">{o.paymentMethod || '-'}</td>
+                              <td className="px-3 py-2 text-right font-medium text-blue-600">{fmt(o.total)}</td>
+                              <td className="px-3 py-2 text-xs text-gray-400 whitespace-nowrap">{new Date(o.createdAt).toLocaleDateString('vi-VN')}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot className="bg-gray-50 font-semibold text-sm">
+                          <tr>
+                            <td colSpan={4} className="px-3 py-2">Tổng cộng ({(detailOrders?.data || []).length} đơn)</td>
+                            <td className="px-3 py-2 text-right text-blue-600">{fmt((detailOrders?.data || []).reduce((s: number, o: any) => s + o.total, 0))}</td>
+                            <td />
+                          </tr>
+                        </tfoot>
+                      </table>
+                    ) : (
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 sticky top-0">
+                          <tr>
+                            <th className="px-3 py-2 text-left text-gray-600 font-medium">Mã đơn</th>
+                            <th className="px-3 py-2 text-left text-gray-600 font-medium">Sản phẩm</th>
+                            <th className="px-3 py-2 text-right text-gray-600 font-medium">SL</th>
+                            <th className="px-3 py-2 text-right text-gray-600 font-medium">Giá vốn/đv</th>
+                            <th className="px-3 py-2 text-right text-gray-600 font-medium">Giá vốn</th>
+                            <th className="px-3 py-2 text-right text-gray-600 font-medium">Doanh thu</th>
+                            <th className="px-3 py-2 text-left text-gray-600 font-medium">Ngày</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {(detailOrders?.data || []).flatMap((o: any) =>
+                            (o.items || []).map((it: any) => ({ ...it, orderCode: o.orderCode, createdAt: o.createdAt }))
+                          ).map((it: any, idx: number) => (
+                            <tr key={idx} className="hover:bg-gray-50">
+                              <td className="px-3 py-2 font-mono text-xs text-blue-600">{it.orderCode}</td>
+                              <td className="px-3 py-2 text-gray-800">{it.product?.name || '?'}</td>
+                              <td className="px-3 py-2 text-right">{it.qty}</td>
+                              <td className="px-3 py-2 text-right text-orange-600">{fmt(it.product?.costPrice || 0)}</td>
+                              <td className="px-3 py-2 text-right font-medium text-orange-600">{fmt(it.qty * (it.product?.costPrice || 0))}</td>
+                              <td className="px-3 py-2 text-right text-blue-600">{fmt(it.total)}</td>
+                              <td className="px-3 py-2 text-xs text-gray-400 whitespace-nowrap">{new Date(it.createdAt).toLocaleDateString('vi-VN')}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot className="bg-gray-50 font-semibold text-sm">
+                          <tr>
+                            <td colSpan={4} className="px-3 py-2">Tổng giá vốn</td>
+                            <td className="px-3 py-2 text-right text-orange-600">{fmt((detailOrders?.data || []).flatMap((o: any) => o.items || []).reduce((s: number, it: any) => s + it.qty * (it.product?.costPrice || 0), 0))}</td>
+                            <td colSpan={2} />
+                          </tr>
+                        </tfoot>
+                      </table>
+                    )
+              )}
+              {(detailType === 'expenses' || detailType === 'income') && (
+                loadingExpenses
+                  ? <div className="text-center py-12 text-gray-400">Đang tải...</div>
+                  : (
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 sticky top-0">
+                        <tr>
+                          <th className="px-3 py-2 text-left text-gray-600 font-medium">Danh mục</th>
+                          <th className="px-3 py-2 text-left text-gray-600 font-medium">Mô tả</th>
+                          <th className="px-3 py-2 text-left text-gray-600 font-medium">Người tạo</th>
+                          <th className="px-3 py-2 text-right text-gray-600 font-medium">Số tiền</th>
+                          <th className="px-3 py-2 text-left text-gray-600 font-medium">Ngày</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {(detailExpenses?.data || [])
+                          .filter((e: any) => e.type === (detailType === 'expenses' ? 'EXPENSE' : 'INCOME'))
+                          .map((e: any) => (
+                            <tr key={e.id} className="hover:bg-gray-50">
+                              <td className="px-3 py-2 text-gray-800">{e.category || '-'}</td>
+                              <td className="px-3 py-2 text-gray-500">{e.description || '-'}</td>
+                              <td className="px-3 py-2 text-gray-500">{e.user?.name || '-'}</td>
+                              <td className={`px-3 py-2 text-right font-medium ${detailType === 'expenses' ? 'text-red-600' : 'text-purple-600'}`}>{fmt(e.amount)}</td>
+                              <td className="px-3 py-2 text-xs text-gray-400 whitespace-nowrap">{new Date(e.createdAt).toLocaleDateString('vi-VN')}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                      <tfoot className="bg-gray-50 font-semibold text-sm">
+                        <tr>
+                          <td colSpan={3} className="px-3 py-2">Tổng cộng</td>
+                          <td className={`px-3 py-2 text-right ${detailType === 'expenses' ? 'text-red-600' : 'text-purple-600'}`}>
+                            {fmt((detailExpenses?.data || []).filter((e: any) => e.type === (detailType === 'expenses' ? 'EXPENSE' : 'INCOME')).reduce((s: number, e: any) => s + e.amount, 0))}
+                          </td>
+                          <td />
+                        </tr>
+                      </tfoot>
+                    </table>
+                  )
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
