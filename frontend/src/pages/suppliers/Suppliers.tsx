@@ -104,6 +104,14 @@ export default function Suppliers() {
           <button onClick={handlePDFSuppliers} className="flex items-center gap-1.5 text-sm btn-outline">
             <FileText size={15} /> PDF
           </button>
+          {selectedIds.size > 0 && (
+            <>
+              <button onClick={delBulk} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700">
+                <Trash2 size={14} /> Xóa ({selectedIds.size})
+              </button>
+              <button onClick={() => setSelectedIds(new Set())} className="text-xs text-gray-400 hover:text-gray-600 underline">Bỏ chọn</button>
+            </>
+          )}
           <button onClick={() => { setEditing(null); setForm(emptyForm); setShowForm(true) }}
             className="btn-primary flex items-center gap-2"><Plus size={18} /> Thêm NCC</button>
         </div>
