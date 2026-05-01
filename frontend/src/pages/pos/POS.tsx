@@ -57,7 +57,9 @@ export default function POS() {
     onSuccess: (res) => {
       toast.success('Tạo đơn hàng thành công!')
       setCart([]); setDiscount(0); setAmountPaid(0); setCustomerId(''); setCustomerSearch('')
+      qc.invalidateQueries({ queryKey: ['orders'] })
       qc.invalidateQueries({ queryKey: ['dashboard'] })
+      qc.invalidateQueries({ queryKey: ['export-orders'] })
       window.print()
     },
     onError: (e: any) => toast.error(e.response?.data?.message || 'Lỗi tạo đơn hàng')
