@@ -264,9 +264,20 @@ export default function Debts() {
       </div>
 
       <div className="card p-0 overflow-hidden">
+        {filteredData.length > 0 && (
+          <div className="px-4 py-2 border-b bg-gray-50 flex items-center justify-between text-sm text-gray-500">
+            <span>Tổng: <strong>{filteredData.length}</strong> khoản · Tổng tiền: <strong className="text-blue-600">{fmt(filteredData.reduce((s: number, d: any) => s + d.amount, 0))}</strong> · Còn lại: <strong className="text-red-600">{fmt(filteredData.reduce((s: number, d: any) => s + d.remaining, 0))}</strong></span>
+            {selectedIds.size > 0 && <span className="text-blue-600 font-medium">Đã chọn {selectedIds.size} / {filteredData.length}</span>}
+          </div>
+        )}
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b">
             <tr>
+              <th className="px-3 py-3 w-10">
+                <input type="checkbox" className="w-4 h-4 rounded cursor-pointer accent-blue-600"
+                  checked={filteredData.length > 0 && filteredData.every((d: any) => selectedIds.has(d.id))}
+                  onChange={e => toggleAll(e.target.checked)} />
+              </th>
               {visCols.map(c => {
                 let label = c.label
                 if (c.key === 'party') label = type === 'CUSTOMER' ? 'Khách hàng' : 'Nhà cung cấp'
@@ -278,8 +289,13 @@ export default function Debts() {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {data?.data?.map((d: any) => (
-              <tr key={d.id} className={`hover:bg-gray-50 ${d.status === 'UNPAID' ? 'bg-red-50/30' : ''}`}>
+            {filteredData.map((d: any) => (
+              <tr key={d.id} className={`hover:bg-gray-50 ${selectedIds.has(d.id) ? 'bg-blue-50' : d.status === 'UNPAID' ? 'bg-red-50/30' : ''}`}>
+                <td className="px-3 py-2">
+                  <input type="checkbox" className="w-4 h-4 rounded cursor-pointer accent-blue-600"
+                    checked={selectedIds.has(d.id)}
+                    onChange={() => toggleSelect(d.id)} />
+                </td>
                 {visible.has('party') && <td className="px-4 py-3 font-medium">{d.customer?.name || d.supplier?.name || '-'}</td>}
                 {visible.has('note') && <td className="px-4 py-3 text-gray-400 text-xs max-w-[160px] truncate">{d.note || '-'}</td>}
                 {visible.has('amount') && (
@@ -329,9 +345,9 @@ export default function Debts() {
                 </td>
               </tr>
             ))}
-            {!data?.data?.length && (
-              <tr><td colSpan={visCols.length + 1} className="text-center py-10 text-gray-400">
-                {status === 'UNPAID' ? `Không có khoản ${unpaidLabel.toLowerCase()} nào` : 'Không có dữ liệu'}
+            {!filteredData.length && (
+              <tr><td colSpan={visCols.length + 2} className="text-center py-10 text-gray-400">
+                {search ? 'Không tìm thấy kết quả' : status === 'UNPAID' ? `Không có khoản ${unpaidLabel.toLowerCase()} nào` : 'Không có dữ liệu'}
               </td></tr>
             )}
           </tbody>
