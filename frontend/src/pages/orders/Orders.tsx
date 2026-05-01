@@ -82,6 +82,16 @@ export default function Orders() {
     onError: (e: any) => toast.error(e.response?.data?.message || 'Không thể xóa')
   })
 
+  const delBulk = async () => {
+    if (!confirm(`Xóa ${selectedIds.size} đơn hàng đã chọn? Thao tác không thể hoàn tác.`)) return
+    try {
+      await Promise.all([...selectedIds].map(id => api.delete(`/orders/${id}`)))
+      toast.success(`Đã xóa ${selectedIds.size} đơn hàng`)
+      setSelectedIds(new Set())
+      qc.invalidateQueries({ queryKey: ['orders'] })
+    } catch { toast.error('Có lỗi khi xóa') }
+  }
+
   const confirmTransition = (order: any, next: string) => {
     const msg: any = {
       COMPLETED: `Xác nhận hoàn thành đơn ${order.orderCode}? Kho sẽ được trừ hàng.`,
