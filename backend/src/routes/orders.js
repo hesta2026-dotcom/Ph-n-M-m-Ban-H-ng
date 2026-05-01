@@ -9,7 +9,7 @@ router.get('/', auth, async (req, res) => {
     const where = {};
     if (status) where.status = status;
     if (channel) where.channel = channel;
-    if (from || to) where.createdAt = { ...(from && { gte: new Date(from) }), ...(to && { lte: new Date(to) }) };
+    if (from || to) where.createdAt = { ...(from && { gte: new Date(from) }), ...(to && { lte: new Date(to + 'T23:59:59') }) };
     if (search) where.orderCode = { contains: search };
     const [orders, total] = await Promise.all([
       prisma.order.findMany({ where, include: { customer: true, user: { select: { id: true, name: true } }, items: { include: { product: true } } }, skip: (page - 1) * limit, take: +limit, orderBy: { createdAt: 'desc' } }),
