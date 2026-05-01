@@ -154,12 +154,23 @@ export default function Orders() {
             value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} />
         </div>
         <div className="ml-auto flex gap-2 items-center">
+          {selectedIds.size > 0 && (
+            <span className="text-sm text-blue-600 font-medium">
+              Đã chọn {selectedIds.size} đơn
+            </span>
+          )}
+          {selectedIds.size > 0 && (
+            <button onClick={() => setSelectedIds(new Set())}
+              className="text-xs text-gray-400 hover:text-gray-600 underline">
+              Bỏ chọn
+            </button>
+          )}
           <ColumnPicker cols={COLS} visible={visible} onChange={setVisible} />
-          <button onClick={handleExcel} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700">
-            <FileSpreadsheet size={14} /> Excel
+          <button onClick={handleExcel} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-sm font-medium ${selectedIds.size > 0 ? 'bg-green-700' : 'bg-green-600 hover:bg-green-700'}`}>
+            <FileSpreadsheet size={14} /> {selectedIds.size > 0 ? `Excel (${selectedIds.size})` : 'Excel'}
           </button>
-          <button onClick={handlePDF} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700">
-            <FileText size={14} /> PDF
+          <button onClick={handlePDF} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-sm font-medium ${selectedIds.size > 0 ? 'bg-red-700' : 'bg-red-600 hover:bg-red-700'}`}>
+            <FileText size={14} /> {selectedIds.size > 0 ? `PDF (${selectedIds.size})` : 'PDF'}
           </button>
         </div>
       </div>
