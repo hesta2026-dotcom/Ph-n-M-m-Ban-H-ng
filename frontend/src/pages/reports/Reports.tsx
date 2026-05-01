@@ -198,11 +198,61 @@ export default function Reports() {
               <tbody className="divide-y">
                 {revenue.map((o: any) => (
                   <tr key={o.id} className="hover:bg-gray-50">
-                    {visible.has('orderCode') && <td className="px-4 py-2.5 font-mono text-xs font-semibold text-blue-700">{o.orderCode}</td>}
-                    {visible.has('customer') && <td className="px-4 py-2.5">{o.customer?.name || 'Khách lẻ'}</td>}
-                    {visible.has('channel') && <td className="px-4 py-2.5 text-gray-500">{channelLabel[o.channel] || o.channel}</td>}
-                    {visible.has('total') && <td className="px-4 py-2.5 font-semibold text-green-600">{fmt(o.total)}</td>}
-                    {visible.has('createdAt') && <td className="px-4 py-2.5 text-gray-400 text-xs">{new Date(o.createdAt).toLocaleDateString('vi-VN')}</td>}
+                    {visible.has('orderCode') && (
+                      <td className="px-4 py-2.5 font-mono text-xs font-semibold text-blue-700 whitespace-nowrap">{o.orderCode}</td>
+                    )}
+                    {visible.has('customer') && (
+                      <td className="px-4 py-2.5">
+                        <p className="font-medium">{o.customer?.name || 'Khách lẻ'}</p>
+                        {o.customer?.phone && <p className="text-xs text-gray-400">{o.customer.phone}</p>}
+                      </td>
+                    )}
+                    {visible.has('phone') && (
+                      <td className="px-4 py-2.5 text-gray-500 text-xs">{o.customer?.phone || '—'}</td>
+                    )}
+                    {visible.has('staff') && (
+                      <td className="px-4 py-2.5 text-gray-600">{o.user?.name || '—'}</td>
+                    )}
+                    {visible.has('channel') && (
+                      <td className="px-4 py-2.5 text-gray-500">{channelLabel[o.channel] || o.channel}</td>
+                    )}
+                    {visible.has('paymentMethod') && (
+                      <td className="px-4 py-2.5">
+                        <span className="badge badge-green text-xs">{PAY_LABEL[o.paymentMethod] || o.paymentMethod}</span>
+                      </td>
+                    )}
+                    {visible.has('items') && (
+                      <td className="px-4 py-2.5 max-w-[220px]">
+                        <div className="space-y-0.5">
+                          {(o.items || []).map((item: any, idx: number) => (
+                            <div key={idx} className="text-xs text-gray-600 flex gap-1">
+                              <span className="font-mono text-gray-400">{item.product?.code}</span>
+                              <span className="truncate">{item.product?.name}</span>
+                              <span className="text-blue-600 font-medium whitespace-nowrap">×{item.qty}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    )}
+                    {visible.has('subtotal') && (
+                      <td className="px-4 py-2.5 text-gray-500 whitespace-nowrap text-xs">{fmt(o.subtotal)}</td>
+                    )}
+                    {visible.has('discount') && (
+                      <td className="px-4 py-2.5 whitespace-nowrap text-xs">
+                        {o.discount > 0 ? <span className="text-red-500">-{fmt(o.discount)}</span> : <span className="text-gray-300">—</span>}
+                      </td>
+                    )}
+                    {visible.has('total') && (
+                      <td className="px-4 py-2.5 font-semibold text-green-600 whitespace-nowrap">{fmt(o.total)}</td>
+                    )}
+                    {visible.has('amountPaid') && (
+                      <td className="px-4 py-2.5 whitespace-nowrap text-xs">
+                        {o.amountPaid > 0 ? <span className="text-gray-600">{fmt(o.amountPaid)}</span> : <span className="text-gray-300">—</span>}
+                      </td>
+                    )}
+                    {visible.has('createdAt') && (
+                      <td className="px-4 py-2.5 text-gray-400 text-xs whitespace-nowrap">{new Date(o.createdAt).toLocaleString('vi-VN')}</td>
+                    )}
                   </tr>
                 ))}
               </tbody>
