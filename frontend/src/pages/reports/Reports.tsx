@@ -82,8 +82,9 @@ export default function Reports() {
 
   const handlePDFRevenue = () => {
     const headers = visCols.map(c => c.label)
+    const moneyKeys = new Set(['subtotal', 'discount', 'total', 'amountPaid'])
     const rows = (revenue || []).map((o: any) => visCols.map(c =>
-      c.key === 'total' ? fmt(o.total) : getVal(o, c.key)
+      moneyKeys.has(c.key) ? fmt(getVal(o, c.key) as number) : String(getVal(o, c.key))
     ))
     exportPDF(`Doanh-thu_${from}_${to}`, 'Báo cáo doanh thu', fmtPeriod(from, to), headers, rows)
   }
