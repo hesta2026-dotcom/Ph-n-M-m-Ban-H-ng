@@ -38,12 +38,16 @@ export function exportPDF(filename: string, title: string, period: string, heade
   if (win) { win.document.write(html); win.document.close() }
 }
 
+// Trả về chuỗi ngày YYYY-MM-DD theo giờ địa phương (không dùng UTC)
+const localDateStr = (d: Date): string =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
 export const PRESETS = [
-  { label: 'Hôm nay', getDates: (): [string, string] => { const d = new Date().toISOString().slice(0, 10); return [d, d] } },
-  { label: '7 ngày', getDates: (): [string, string] => { const to = new Date(); const from = new Date(); from.setDate(from.getDate() - 6); return [from.toISOString().slice(0, 10), to.toISOString().slice(0, 10)] } },
-  { label: 'Tháng này', getDates: (): [string, string] => { const n = new Date(); return [new Date(n.getFullYear(), n.getMonth(), 1).toISOString().slice(0, 10), n.toISOString().slice(0, 10)] } },
-  { label: 'Tháng trước', getDates: (): [string, string] => { const n = new Date(); const f = new Date(n.getFullYear(), n.getMonth() - 1, 1); const t = new Date(n.getFullYear(), n.getMonth(), 0); return [f.toISOString().slice(0, 10), t.toISOString().slice(0, 10)] } },
-  { label: 'Năm nay', getDates: (): [string, string] => { const n = new Date(); return [new Date(n.getFullYear(), 0, 1).toISOString().slice(0, 10), n.toISOString().slice(0, 10)] } },
+  { label: 'Hôm nay', getDates: (): [string, string] => { const d = localDateStr(new Date()); return [d, d] } },
+  { label: '7 ngày', getDates: (): [string, string] => { const to = new Date(); const from = new Date(); from.setDate(from.getDate() - 6); return [localDateStr(from), localDateStr(to)] } },
+  { label: 'Tháng này', getDates: (): [string, string] => { const n = new Date(); return [localDateStr(new Date(n.getFullYear(), n.getMonth(), 1)), localDateStr(n)] } },
+  { label: 'Tháng trước', getDates: (): [string, string] => { const n = new Date(); return [localDateStr(new Date(n.getFullYear(), n.getMonth() - 1, 1)), localDateStr(new Date(n.getFullYear(), n.getMonth(), 0))] } },
+  { label: 'Năm nay', getDates: (): [string, string] => { const n = new Date(); return [localDateStr(new Date(n.getFullYear(), 0, 1)), localDateStr(n)] } },
 ]
 
 export function fmtPeriod(from: string, to: string) {
