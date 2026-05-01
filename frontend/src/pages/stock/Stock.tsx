@@ -59,11 +59,7 @@ const COLS_EXPORT: ColDef[] = [
   { key: 'createdAt', label: 'Ngày xuất' },
 ]
 
-const WH_STATUS: Record<string, { label: string; cls: string; next: string; nextLabel: string }> = {
-  PENDING:   { label: 'Chờ xuất',   cls: 'badge-yellow', next: 'EXPORTING', nextLabel: 'Bắt đầu xuất' },
-  EXPORTING: { label: 'Đang xuất',  cls: 'badge-blue',   next: 'EXPORTED',  nextLabel: 'Xác nhận đã xuất' },
-  EXPORTED:  { label: 'Đã xuất kho', cls: 'badge-green', next: 'PENDING',   nextLabel: 'Reset' },
-}
+const WH_LABEL: Record<string, string> = { PENDING: 'Chưa xuất', EXPORTING: 'Đang xuất', EXPORTED: 'Đã xuất' }
 
 function ProductThumb({ product, size = 'sm' }: { product: any; size?: 'sm' | 'md' }) {
   const imgs: string[] = product?.images ? JSON.parse(product.images) : []
