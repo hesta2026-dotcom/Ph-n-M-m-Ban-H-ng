@@ -238,6 +238,7 @@ export default function Stock() {
   })
 
   const filteredExportOrders = (exportOrders?.data || []).filter((o: any) => {
+    if (filterWhStatus && (o.warehouseStatus || 'PENDING') !== filterWhStatus) return false
     if (!searchExport) return true
     const q = searchExport.toLowerCase()
     return o.orderCode.toLowerCase().includes(q) ||
