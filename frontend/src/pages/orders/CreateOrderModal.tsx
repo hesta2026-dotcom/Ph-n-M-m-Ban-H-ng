@@ -31,7 +31,7 @@ export default function CreateOrderModal({ onClose, onSuccess }: Props) {
   const [amountPaid, setAmountPaid] = useState(0)
   const [note, setNote] = useState('')
   const [channel, setChannel] = useState('store')
-  const [status, setStatus] = useState('COMPLETED')
+  const [status, setStatus] = useState('PENDING')
   const [showProductSearch, setShowProductSearch] = useState(false)
   const [showCustomerSearch, setShowCustomerSearch] = useState(false)
   const [showNewCustomer, setShowNewCustomer] = useState(false)
