@@ -879,7 +879,7 @@ export default function Stock() {
                 ))}
                 {!filteredExportOrders.length && (
                   <tr><td colSpan={COLS_EXPORT.filter(c => visExport.has(c.key)).length + 1} className="text-center py-10 text-gray-400">
-                    {searchExport ? 'Không tìm thấy kết quả' : 'Chưa có đơn hàng hoàn thành trong khoảng thời gian này'}
+                    {searchExport ? 'Không tìm thấy kết quả' : 'Chưa có đơn hàng nào trong khoảng thời gian này'}
                   </td></tr>
                 )}
               </tbody>
