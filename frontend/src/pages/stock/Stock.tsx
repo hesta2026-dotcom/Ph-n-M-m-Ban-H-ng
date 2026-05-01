@@ -717,7 +717,7 @@ export default function Stock() {
               <span className="text-sm font-medium text-gray-600 whitespace-nowrap">Phiếu xuất hàng</span>
               {/* Lọc nhanh theo trạng thái xuất kho */}
               <div className="flex gap-1">
-                {[['', 'Tất cả'], ['PENDING', 'Chờ xuất'], ['EXPORTING', 'Đang xuất'], ['EXPORTED', 'Đã xuất']].map(([val, label]) => (
+                {([['', 'Tất cả'], ['PENDING', 'Chưa xuất'], ['EXPORTING', 'Đang xuất'], ['EXPORTED', 'Đã xuất']] as [string,string][]).map(([val, label]) => (
                   <button key={val} onClick={() => { setFilterWhStatus(val); setSelectedExportIds(new Set()) }}
                     className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${filterWhStatus === val ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}>
                     {label}
