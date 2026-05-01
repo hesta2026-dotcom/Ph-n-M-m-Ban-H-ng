@@ -256,17 +256,9 @@ export default function Debts() {
         </div>
         <div className="flex gap-2 ml-auto items-center">
           {selectedIds.size > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-blue-600 font-medium whitespace-nowrap">Đã chọn {selectedIds.size}</span>
-              {selectedTotal > 0 && (
-                <button
-                  onClick={() => payBulk.mutate(Array.from(selectedIds))}
-                  disabled={payBulk.isPending}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-medium hover:bg-green-700 disabled:opacity-50 whitespace-nowrap">
-                  <CheckCircle size={13} /> {payBulk.isPending ? 'Đang xử lý...' : `Thanh toán (${fmt(selectedTotal)})`}
-                </button>
-              )}
-              <button onClick={() => setSelectedIds(new Set())} className="text-xs text-gray-400 hover:text-gray-600 underline">Bỏ chọn</button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-medium text-blue-600 whitespace-nowrap">✓ {selectedIds.size} dòng</span>
+              <button onClick={() => setSelectedIds(new Set())} className="text-xs text-gray-400 hover:text-gray-600 underline whitespace-nowrap">Bỏ chọn</button>
             </div>
           )}
           <ColumnPicker cols={COLS} visible={visible} onChange={setVisible} />
