@@ -55,6 +55,16 @@ export default function Expenses() {
     onError: (e: any) => toast.error(e.response?.data?.message || 'Lỗi')
   })
 
+  const del = useMutation({
+    mutationFn: (id: string) => api.delete(`/expenses/${id}`),
+    onSuccess: () => {
+      toast.success('Đã xóa')
+      qc.invalidateQueries({ queryKey: ['expenses'] })
+      qc.invalidateQueries({ queryKey: ['cashflow'] })
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Không thể xóa')
+  })
+
   const getVal = (e: any, key: string) => {
     switch (key) {
       case 'type': return e.type === 'INCOME' ? 'Thu' : 'Chi'
