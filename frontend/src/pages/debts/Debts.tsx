@@ -34,6 +34,8 @@ export default function Debts() {
   const [payAmount, setPayAmount] = useState<{ [id: string]: number }>({})
   const [viewDebt, setViewDebt] = useState<any>(null)
   const [visible, setVisible] = useState<Set<string>>(() => new Set(COLS.map(c => c.key)))
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [search, setSearch] = useState('')
   const qc = useQueryClient()
 
   const applyPreset = (p: typeof PRESETS[number]) => {
