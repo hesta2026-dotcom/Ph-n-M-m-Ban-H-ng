@@ -186,6 +186,16 @@ export default function Stock() {
   const updatePurchaseItem = (i: number, key: string, val: any) =>
     setPurchaseForm(p => ({ ...p, items: p.items.map((item, idx) => idx === i ? { ...item, [key]: val } : item) }))
 
+  const updateWhStatus = useMutation({
+    mutationFn: ({ id, warehouseStatus }: { id: string; warehouseStatus: string }) =>
+      api.patch(`/orders/${id}/warehouse-status`, { warehouseStatus }).then(r => r.data),
+    onSuccess: () => {
+      toast.success('Đã cập nhật trạng thái xuất kho')
+      qc.invalidateQueries({ queryKey: ['export-orders'] })
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Lỗi cập nhật')
+  })
+
   const purchase = useMutation({
     mutationFn: (d: any) => api.post('/purchases', d),
     onSuccess: () => {
