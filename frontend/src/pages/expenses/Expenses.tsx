@@ -154,6 +154,7 @@ export default function Expenses() {
           <thead className="bg-gray-50 border-b">
             <tr>
               {visCols.map(c => <th key={c.key} className="px-4 py-3 text-left font-medium text-gray-600">{c.label}</th>)}
+              <th className="px-4 py-3 text-left font-medium text-gray-600">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -165,9 +166,13 @@ export default function Expenses() {
                 {visible.has('description') && <td className="px-4 py-3 text-gray-500">{e.description || '-'}</td>}
                 {visible.has('user') && <td className="px-4 py-3 text-gray-500">{e.user?.name}</td>}
                 {visible.has('createdAt') && <td className="px-4 py-3 text-gray-400">{new Date(e.createdAt).toLocaleDateString('vi-VN')}</td>}
+                <td className="px-4 py-3">
+                  <button onClick={() => { if (confirm('Xóa bản ghi này?')) del.mutate(e.id) }}
+                    className="text-red-400 hover:text-red-600"><Trash2 size={15} /></button>
+                </td>
               </tr>
             ))}
-            {!data?.data?.length && <tr><td colSpan={visCols.length} className="text-center py-10 text-gray-400">Không có dữ liệu</td></tr>}
+            {!data?.data?.length && <tr><td colSpan={visCols.length + 1} className="text-center py-10 text-gray-400">Không có dữ liệu</td></tr>}
           </tbody>
         </table>
       </div>
