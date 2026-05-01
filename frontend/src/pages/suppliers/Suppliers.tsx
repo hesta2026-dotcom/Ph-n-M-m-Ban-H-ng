@@ -127,13 +127,22 @@ export default function Suppliers() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b">
             <tr>
+              <th className="px-3 py-3 w-10">
+                <input type="checkbox" className="w-4 h-4 rounded cursor-pointer accent-blue-600"
+                  checked={(data?.length ?? 0) > 0 && (data ?? []).every((s: any) => selectedIds.has(s.id))}
+                  onChange={e => {
+                    const ids = (data ?? []).map((s: any) => s.id)
+                    if (e.target.checked) setSelectedIds(prev => new Set([...prev, ...ids]))
+                    else setSelectedIds(prev => { const s = new Set(prev); ids.forEach((id: string) => s.delete(id)); return s })
+                  }} />
+              </th>
               {visCols.map(c => <th key={c.key} className="px-4 py-3 text-left font-medium text-gray-600">{c.label}</th>)}
               <th className="px-4 py-3 text-left font-medium text-gray-600">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {data?.map((s: any) => (
-              <tr key={s.id} className="hover:bg-gray-50">
+              <tr key={s.id} className={`hover:bg-gray-50 ${selectedIds.has(s.id) ? 'bg-blue-50' : ''}`}>
                 {visible.has('name') && <td className="px-4 py-3">
                   <button onClick={() => setViewSupplier(s)}
                     className="font-medium text-left hover:text-blue-600 hover:underline flex items-center gap-1">
