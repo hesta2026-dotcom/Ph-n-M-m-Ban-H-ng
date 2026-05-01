@@ -182,11 +182,11 @@ export default function ProfitLoss() {
       ) : (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-            <StatCard label="Doanh thu" value={fmt(d.revenue)} icon={TrendingUp} colorClass="text-blue-600" bgClass="bg-blue-50" />
-            <StatCard label="Giá vốn hàng bán" value={fmt(d.cogs)} sub={`${d.revenue ? ((d.cogs/d.revenue)*100).toFixed(1) : 0}% doanh thu`} icon={ShoppingBag} colorClass="text-orange-600" bgClass="bg-orange-50" />
+            <StatCard label="Doanh thu" value={fmt(d.revenue)} icon={TrendingUp} colorClass="text-blue-600" bgClass="bg-blue-50" onClick={() => setDetailType('revenue')} />
+            <StatCard label="Giá vốn hàng bán" value={fmt(d.cogs)} sub={`${d.revenue ? ((d.cogs/d.revenue)*100).toFixed(1) : 0}% doanh thu`} icon={ShoppingBag} colorClass="text-orange-600" bgClass="bg-orange-50" onClick={() => setDetailType('cogs')} />
             <StatCard label="Lợi nhuận gộp" value={fmt(d.grossProfit)} sub={`Biên lợi nhuận gộp: ${d.grossMargin.toFixed(1)}%`} icon={DollarSign} colorClass={d.grossProfit >= 0 ? 'text-green-600' : 'text-red-600'} bgClass={d.grossProfit >= 0 ? 'bg-green-50' : 'bg-red-50'} isProfit={d.grossProfit >= 0} />
-            <StatCard label="Chi phí hoạt động" value={fmt(d.expenses)} icon={TrendingDown} colorClass="text-red-600" bgClass="bg-red-50" />
-            <StatCard label="Thu nhập khác" value={fmt(d.otherIncome)} icon={Activity} colorClass="text-purple-600" bgClass="bg-purple-50" />
+            <StatCard label="Chi phí hoạt động" value={fmt(d.expenses)} icon={TrendingDown} colorClass="text-red-600" bgClass="bg-red-50" onClick={() => setDetailType('expenses')} />
+            <StatCard label="Thu nhập khác" value={fmt(d.otherIncome)} icon={Activity} colorClass="text-purple-600" bgClass="bg-purple-50" onClick={() => setDetailType('income')} />
             <StatCard label="Lợi nhuận ròng" value={fmt(d.netProfit)} sub={`Biên lợi nhuận ròng: ${d.netMargin.toFixed(1)}%`} icon={Percent} colorClass={d.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'} bgClass={d.netProfit >= 0 ? 'bg-emerald-50' : 'bg-red-50'} isProfit={d.netProfit >= 0} />
           </div>
 
