@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 router.get('/', auth, async (req, res) => {
   try {
     const { type, status, from, to, page = 1, limit = 200 } = req.query;
-    const where = { ...(type && { type }), ...(status && { status }), ...(from || to ? { createdAt: { ...(from && { gte: new Date(from) }), ...(to && { lte: new Date(to + 'T23:59:59') }) } } : {}) };
+    const where = { ...(type && { type }), ...(status && { status }), ...(from || to ? { createdAt: { ...(from && { gte: new Date(from + 'T00:00:00+07:00') }), ...(to && { lte: new Date(to + 'T23:59:59+07:00') }) } } : {}) };
     const [debts, total] = await Promise.all([
       prisma.debt.findMany({ where, include: { customer: true, supplier: true, order: true }, skip: (page - 1) * limit, take: +limit, orderBy: { createdAt: 'desc' } }),
       prisma.debt.count({ where })
