@@ -449,7 +449,7 @@ export default function Stock() {
             <ColumnPicker cols={COLS_ALL} visible={visAll} onChange={setVisAll} />
             <button onClick={() => {
               const vc = COLS_ALL.filter(c => visAll.has(c.key))
-              const rows = visibleAllProducts.map((p: any) => vc.map(c => getAllVal(p, c)))
+              const rows = visibleAllProducts.map((p: any) => vc.map(c => getAllVal(p, c.key)))
               exportExcel(`Ton-kho_${new Date().toISOString().slice(0,10)}`, 'Tồn kho', vc.map(c => c.label), rows)
             }} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 whitespace-nowrap">
               <FileSpreadsheet size={14} /> {selectedAllIds.size > 0 ? `Excel (${selectedAllIds.size})` : 'Excel'}
