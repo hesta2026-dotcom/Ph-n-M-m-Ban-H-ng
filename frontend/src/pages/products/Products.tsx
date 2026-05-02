@@ -9,6 +9,17 @@ import { exportExcel, exportPDF } from '../../utils/export'
 
 const fmt = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
 
+function fmtStock(stock: number, unit: string, packageUnit?: string | null, packageQty?: number | null) {
+  if (packageUnit && packageQty && packageQty > 0) {
+    const boxes = Math.floor(stock / packageQty)
+    const rem = stock % packageQty
+    if (boxes > 0 && rem > 0) return `${boxes} ${packageUnit} ${rem} ${unit}`
+    if (boxes > 0) return `${boxes} ${packageUnit}`
+    return `${rem} ${unit}`
+  }
+  return `${stock} ${unit}`
+}
+
 const COLS: ColDef[] = [
   { key: 'image', label: 'Ảnh' },
   { key: 'code', label: 'Mã SP' },
