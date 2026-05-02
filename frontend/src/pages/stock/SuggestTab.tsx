@@ -56,7 +56,8 @@ export default function SuggestTab({ suggestions, suggestLoading, onCreatePurcha
 
   const critical = suggestions.filter(s => urgency(s.daysRemaining) === 'critical')
   const warning = suggestions.filter(s => urgency(s.daysRemaining) === 'warning')
-  const totalValue = suggestions.reduce((acc, s) => acc + s.suggestedQty * s.costPrice, 0)
+  const calcValue = (s: SuggestItem) => s.packageQty ? (s.suggestedQty / s.packageQty) * s.costPrice : s.suggestedQty * s.costPrice
+  const totalValue = suggestions.reduce((acc, s) => acc + calcValue(s), 0)
   const selectedItems = suggestions.filter(s => selected.has(s.id))
 
   return (
