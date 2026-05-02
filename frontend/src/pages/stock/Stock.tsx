@@ -22,10 +22,14 @@ const COLS_LOW: ColDef[] = [
 ]
 const COLS_ALL: ColDef[] = [
   { key: 'product', label: 'Sản phẩm' },
+  { key: 'code', label: 'Mã SP' },
   { key: 'brandMfr', label: 'Thương hiệu / CTSX' },
-  { key: 'specification', label: 'Quy cách' },
-  { key: 'unit', label: 'Đơn vị' },
-  { key: 'stock', label: 'Tồn kho' },
+  { key: 'packageUnit', label: 'ĐVT thùng' },
+  { key: 'packageQty', label: 'SL/thùng' },
+  { key: 'unit', label: 'ĐVT lẻ' },
+  { key: 'stockBoxes', label: 'Tồn (thùng)' },
+  { key: 'stockRem', label: 'Tồn (lẻ)' },
+  { key: 'stock', label: 'Tổng tồn' },
   { key: 'minStock', label: 'Tối thiểu' },
   { key: 'price', label: 'Giá bán' },
   { key: 'costPrice', label: 'Giá vốn' },
