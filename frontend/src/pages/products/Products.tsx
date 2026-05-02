@@ -394,7 +394,7 @@ export default function Products() {
                     {visible.has('price') && <td className="px-3 py-2 text-blue-600 font-semibold whitespace-nowrap">{fmt(p.price)}</td>}
                     {visible.has('costPrice') && <td className="px-3 py-2 text-gray-500 whitespace-nowrap">{fmt(p.costPrice)}</td>}
                     {visible.has('stock') && <td className="px-3 py-2">
-                      <span className={`badge ${p.stock <= p.minStock ? 'badge-red' : 'badge-green'}`}>{p.stock} {p.unit}</span>
+                      <span className={`badge ${p.stock <= p.minStock ? 'badge-red' : 'badge-green'}`}>{fmtStock(p.stock, p.unit, p.packageUnit, p.packageQty)}</span>
                     </td>}
                     <td className="px-3 py-2">
                       <div className="flex gap-2">
