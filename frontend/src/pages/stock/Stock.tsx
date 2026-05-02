@@ -546,9 +546,6 @@ export default function Stock() {
                             <span className={rem === 0 ? 'text-gray-400' : 'text-gray-800'}>{rem}</span>
                           </td>
                         )}
-                        {visAll.has('minStock') && <td className="px-4 py-3 text-gray-400 text-right">{p.minStock}</td>}
-                        {visAll.has('price') && <td className="px-4 py-3 text-blue-600 font-medium whitespace-nowrap text-right">{fmt(p.price)}</td>}
-                        {visAll.has('costPrice') && <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-right">{fmt(p.costPrice)}</td>}
                         {visAll.has('stockValueCost') && (
                           <td className="px-4 py-3 text-right font-semibold text-purple-700 whitespace-nowrap">
                             {fmt(pQty > 0 ? (p.stock / pQty) * p.costPrice : p.stock * p.costPrice)}
@@ -559,6 +556,9 @@ export default function Stock() {
                             {fmt(pQty > 0 ? (p.stock / pQty) * p.price : p.stock * p.price)}
                           </td>
                         )}
+                        {visAll.has('minStock') && <td className="px-4 py-3 text-gray-400 text-right">{p.minStock}</td>}
+                        {visAll.has('price') && <td className="px-4 py-3 text-blue-600 font-medium whitespace-nowrap text-right">{fmt(p.price)}</td>}
+                        {visAll.has('costPrice') && <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-right">{fmt(p.costPrice)}</td>}
                         <td className="px-3 py-2">
                           <button onClick={() => { if (confirm('Xóa sản phẩm này?')) api.delete(`/products/${p.id}`).then(() => { toast.success('Đã xóa'); qc.invalidateQueries({ queryKey: ['stock-all'] }); qc.invalidateQueries({ queryKey: ['products'] }) }).catch(() => toast.error('Lỗi xóa')) }}
                             className="text-red-400 hover:text-red-600" title="Xóa sản phẩm">
