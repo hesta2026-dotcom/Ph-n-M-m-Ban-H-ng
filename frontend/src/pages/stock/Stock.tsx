@@ -498,6 +498,7 @@ export default function Stock() {
                     {COLS_ALL.filter(c => visAll.has(c.key)).map(c => (
                       <th key={c.key} className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">{c.label}</th>
                     ))}
+                    <th className="px-3 py-3 w-10"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
