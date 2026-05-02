@@ -60,11 +60,19 @@ router.get('/suggestions', auth, async (req, res) => {
         suggestedRem = suggestedQty % p.packageQty;
       }
 
+      // Giá trị tồn kho & gợi ý: giá vốn tính theo thùng → value = (qty / packageQty) * costPrice
+      const stockValue = p.packageQty > 0
+        ? (p.stock / p.packageQty) * p.costPrice
+        : p.stock * p.costPrice;
+      const suggestedValue = p.packageQty > 0
+        ? (suggestedQty / p.packageQty) * p.costPrice
+        : suggestedQty * p.costPrice;
+
       suggestions.push({
         id: p.id, name: p.name, code: p.code, unit: p.unit,
         packageUnit: p.packageUnit, packageQty: p.packageQty,
         stock: p.stock, minStock: p.minStock,
-        costPrice: p.costPrice,
+        costPrice: p.costPrice, stockValue, suggestedValue,
         supplierId: p.supplierId, supplierName: p.supplier?.name || null,
         dailyAvg: Math.round(dailyAvg * 100) / 100,
         totalSold, daysRemaining: Math.round(daysRemaining * 10) / 10,
