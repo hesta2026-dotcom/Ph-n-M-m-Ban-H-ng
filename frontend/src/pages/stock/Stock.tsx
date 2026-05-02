@@ -301,6 +301,8 @@ export default function Stock() {
       case 'minStock': return p.minStock
       case 'price': return p.price
       case 'costPrice': return p.costPrice
+      case 'stockValueCost': return pQty > 0 ? (p.stock / pQty) * p.costPrice : p.stock * p.costPrice
+      case 'stockValueSell': return pQty > 0 ? (p.stock / pQty) * p.price : p.stock * p.price
       default: return ''
     }
   }
