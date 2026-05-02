@@ -278,6 +278,38 @@ export default function Stock() {
 
   const purchaseTotal = purchaseForm.items.reduce((s, i) => s + i.qty * i.costPrice, 0)
 
+  const getAllVal = (p: any, key: string) => {
+    const pQty = p.packageQty || 0
+    switch (key) {
+      case 'product': return p.name
+      case 'code': return p.code
+      case 'brandMfr': return [p.brand, p.manufacturer].filter(Boolean).join(' / ') || ''
+      case 'packageUnit': return p.packageUnit || ''
+      case 'packageQty': return pQty || ''
+      case 'unit': return p.unit
+      case 'stockBoxes': return pQty > 0 ? Math.floor(p.stock / pQty) : ''
+      case 'stockRem': return pQty > 0 ? p.stock % pQty : p.stock
+      case 'stock': return p.stock
+      case 'minStock': return p.minStock
+      case 'price': return p.price
+      case 'costPrice': return p.costPrice
+      default: return ''
+    }
+  }
+
+  const visibleAllProducts = selectedAllIds.size > 0
+    ? (allProducts || []).filter((p: any) => selectedAllIds.has(p.id))
+    : (allProducts || [])
+
+  const allTotals = (allProducts || []).reduce((acc: any, p: any) => {
+    const pQty = p.packageQty || 0
+    acc.totalSkus += 1
+    acc.totalUnits += p.stock
+    acc.totalBoxes += pQty > 0 ? Math.floor(p.stock / pQty) : 0
+    acc.stockValue += p.stock * p.costPrice
+    return acc
+  }, { totalSkus: 0, totalUnits: 0, totalBoxes: 0, stockValue: 0 })
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
