@@ -101,7 +101,7 @@ function ProductInfo({ product }: { product: any }) {
 }
 
 export default function Stock() {
-  const [tab, setTab] = useState<'low' | 'all' | 'logs' | 'purchase' | 'export'>('all')
+  const [tab, setTab] = useState<'low' | 'all' | 'logs' | 'purchase' | 'export' | 'suggest'>('all')
   const [viewPurchase, setViewPurchase] = useState<any>(null)
   const now2 = new Date()
   const _ld = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
