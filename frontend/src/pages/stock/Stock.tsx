@@ -457,7 +457,7 @@ export default function Stock() {
             <button onClick={() => {
               const vc = COLS_ALL.filter(c => visAll.has(c.key))
               const rows = visibleAllProducts.map((p: any) => vc.map(c => {
-                const v = getAllVal(p, c)
+                const v = getAllVal(p, c.key)
                 return (c.key === 'price' || c.key === 'costPrice') && typeof v === 'number' ? fmt(v) : v
               }))
               exportPDF(`Ton-kho_${new Date().toISOString().slice(0,10)}`, 'Danh sách tồn kho', `Tổng: ${allProducts?.length || 0} sản phẩm | Giá trị: ${fmt(allTotals.stockValue)}`, vc.map(c => c.label), rows)
