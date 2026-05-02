@@ -205,11 +205,19 @@ export default function NewProductModal({ onClose, onCreated, defaultSupplierId 
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Giá & Kho hàng</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Giá bán *</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-sm font-medium text-gray-700">Giá bán *</label>
+                  {priceAutoSet && form.price > 0 && (
+                    <span className="text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-medium">
+                      Gợi ý ×{MARGIN}
+                    </span>
+                  )}
+                </div>
                 <div className="relative">
-                  <input className="input pr-8 text-right" required placeholder="0"
+                  <input className={`input pr-8 text-right ${priceAutoSet ? 'border-blue-300 bg-blue-50/30' : ''}`}
+                    required placeholder="0"
                     value={fmtMoney(form.price)}
-                    onChange={e => set('price', parseMoney(e.target.value))} />
+                    onChange={e => handlePriceChange(parseMoney(e.target.value))} />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">đ</span>
                 </div>
               </div>
@@ -218,9 +226,17 @@ export default function NewProductModal({ onClose, onCreated, defaultSupplierId 
                 <div className="relative">
                   <input className="input pr-8 text-right" placeholder="0"
                     value={fmtMoney(form.costPrice)}
-                    onChange={e => set('costPrice', parseMoney(e.target.value))} />
+                    onChange={e => handleCostPriceChange(parseMoney(e.target.value))} />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">đ</span>
                 </div>
+                {form.costPrice > 0 && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Gợi ý giá bán: <button type="button" className="text-blue-500 font-medium hover:underline"
+                      onClick={() => { set('price', suggestPrice(form.costPrice)); setPriceAutoSet(true) }}>
+                      {fmtMoney(suggestPrice(form.costPrice))}đ
+                    </button>
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Tồn kho ban đầu</label>
