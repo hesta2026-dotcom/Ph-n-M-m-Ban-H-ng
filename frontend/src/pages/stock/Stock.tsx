@@ -323,7 +323,7 @@ export default function Stock() {
     acc.totalSkus += 1
     acc.totalUnits += p.stock
     acc.totalBoxes += pQty > 0 ? Math.floor(p.stock / pQty) : 0
-    acc.stockValue += p.stock * p.costPrice
+    acc.stockValue += pQty > 0 ? (p.stock / pQty) * p.costPrice : p.stock * p.costPrice
     return acc
   }, { totalSkus: 0, totalUnits: 0, totalBoxes: 0, stockValue: 0 })
 
