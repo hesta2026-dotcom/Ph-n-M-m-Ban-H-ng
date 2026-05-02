@@ -555,7 +555,6 @@ export default function Stock() {
                             {fmt(pQty > 0 ? (p.stock / pQty) * p.price : p.stock * p.price)}
                           </td>
                         )}
-                        {visAll.has('minStock') && <td className="px-4 py-3 text-gray-400 text-right">{p.minStock}</td>}
                         {visAll.has('price') && <td className="px-4 py-3 text-blue-600 font-medium whitespace-nowrap text-right">{fmt(p.price)}</td>}
                         {visAll.has('costPrice') && <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-right">{fmt(p.costPrice)}</td>}
                         <td className="px-3 py-2">
