@@ -546,11 +546,6 @@ export default function Stock() {
                             <span className={rem === 0 ? 'text-gray-400' : 'text-gray-800'}>{rem}</span>
                           </td>
                         )}
-                        {visAll.has('stock') && (
-                          <td className="px-4 py-3 text-right">
-                            <span className={`badge ${p.stock === 0 ? 'badge-red' : isLow ? 'badge-yellow' : 'badge-green'}`}>{p.stock}</span>
-                          </td>
-                        )}
                         {visAll.has('minStock') && <td className="px-4 py-3 text-gray-400 text-right">{p.minStock}</td>}
                         {visAll.has('price') && <td className="px-4 py-3 text-blue-600 font-medium whitespace-nowrap text-right">{fmt(p.price)}</td>}
                         {visAll.has('costPrice') && <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-right">{fmt(p.costPrice)}</td>}
