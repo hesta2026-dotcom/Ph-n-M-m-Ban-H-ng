@@ -443,8 +443,8 @@ export default function Stock() {
             {[
               { label: 'Tổng mã hàng', value: allTotals.totalSkus, unit: 'SKU', color: 'text-blue-600', bg: 'bg-blue-50' },
               { label: 'Tổng tồn kho', value: new Intl.NumberFormat('vi-VN').format(allTotals.totalUnits), unit: 'đơn vị lẻ', color: 'text-green-600', bg: 'bg-green-50' },
-              { label: 'Quy đổi thùng', value: new Intl.NumberFormat('vi-VN').format(allTotals.totalBoxes), unit: 'thùng', color: 'text-orange-600', bg: 'bg-orange-50' },
-              { label: 'Giá trị tồn kho', value: fmt(allTotals.stockValue), unit: '(theo giá vốn)', color: 'text-purple-600', bg: 'bg-purple-50' },
+              { label: 'Tổng Tồn Nhập', value: fmt(allTotals.stockValueCost), unit: 'theo giá vốn', color: 'text-purple-600', bg: 'bg-purple-50' },
+              { label: 'Tổng Tồn Bán', value: fmt(allTotals.stockValueSell), unit: 'theo giá bán', color: 'text-blue-700', bg: 'bg-blue-50' },
             ].map(s => (
               <div key={s.label} className={`card flex items-center gap-3 py-3 ${s.bg}`}>
                 <div>
