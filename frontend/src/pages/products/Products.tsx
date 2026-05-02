@@ -100,7 +100,7 @@ export default function Products() {
 
   const handleExportPDF = () => {
     const rows = (data?.data || []).map((p: any) => visCols.map(c =>
-      c.key === 'price' || c.key === 'costPrice' ? fmt(getProductVal(p, c.key) as number) : String(getProductVal(p, c.key))
+      c.key === 'price' || c.key === 'costPrice' || c.key === 'stock' ? fmt(getProductVal(p, c.key) as number) : String(getProductVal(p, c.key))
     ))
     exportPDF(`San-pham_${new Date().toISOString().slice(0, 10)}`, 'Danh sách sản phẩm', '', visCols.map(c => c.label), rows)
   }
