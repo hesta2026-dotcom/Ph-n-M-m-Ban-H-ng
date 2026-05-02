@@ -580,7 +580,6 @@ export default function Stock() {
                       {visAll.has('stockRem') && <td className="px-4 py-3 text-right text-gray-500">—</td>}
                       {visAll.has('stockValueCost') && <td className="px-4 py-3 text-right text-purple-600 font-bold">{fmt(allTotals.stockValueCost)}</td>}
                       {visAll.has('stockValueSell') && <td className="px-4 py-3 text-right text-blue-700 font-bold">{fmt(allTotals.stockValueSell)}</td>}
-                      {visAll.has('minStock') && <td />}
                       {visAll.has('price') && <td />}
                       {visAll.has('costPrice') && <td />}
                       <td />
