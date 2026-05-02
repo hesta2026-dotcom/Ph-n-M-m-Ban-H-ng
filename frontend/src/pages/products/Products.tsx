@@ -387,9 +387,28 @@ export default function Products() {
                     {visible.has('category') && <td className="px-3 py-2 text-gray-500">{p.category?.name || '-'}</td>}
                     {visible.has('price') && <td className="px-3 py-2 text-blue-600 font-semibold whitespace-nowrap">{fmt(p.price)}</td>}
                     {visible.has('costPrice') && <td className="px-3 py-2 text-gray-500 whitespace-nowrap">{fmt(p.costPrice)}</td>}
-                    {visible.has('stock') && <td className="px-3 py-2">
-                      <span className={`badge ${p.stock <= p.minStock ? 'badge-red' : 'badge-green'}`}>{fmtStock(p.stock, p.unit, p.packageUnit, p.packageQty)}</span>
-                    </td>}
+                    {visible.has('stockBoxes') && (
+                      <td className="px-3 py-2 text-right">
+                        {p.packageQty > 0
+                          ? <span className="font-medium text-gray-800">{Math.floor(p.stock / p.packageQty)}<span className="text-xs text-gray-400 ml-1">{p.packageUnit}</span></span>
+                          : <span className="text-gray-300">—</span>}
+                      </td>
+                    )}
+                    {visible.has('stockRem') && (
+                      <td className="px-3 py-2 text-right">
+                        <span className="font-medium text-gray-800">
+                          {p.packageQty > 0 ? p.stock % p.packageQty : p.stock}
+                          <span className="text-xs text-gray-400 ml-1">{p.unit}</span>
+                        </span>
+                      </td>
+                    )}
+                    {visible.has('stock') && (
+                      <td className="px-3 py-2 text-right">
+                        <span className={`badge ${p.stock <= p.minStock ? 'badge-red' : 'badge-green'}`}>
+                          {p.stock} {p.unit}
+                        </span>
+                      </td>
+                    )}
                     <td className="px-3 py-2">
                       <div className="flex gap-2">
                         <button onClick={() => openEdit(p)} className="text-blue-500 hover:text-blue-700"><Edit2 size={15} /></button>
