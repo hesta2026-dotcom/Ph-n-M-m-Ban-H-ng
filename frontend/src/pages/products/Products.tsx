@@ -405,10 +405,8 @@ export default function Products() {
                       </td>
                     )}
                     {visible.has('stock') && (
-                      <td className="px-3 py-2 text-right">
-                        <span className={`badge ${p.stock <= p.minStock ? 'badge-red' : 'badge-green'}`}>
-                          {p.stock} {p.unit}
-                        </span>
+                      <td className="px-3 py-2 text-right font-semibold text-purple-700 whitespace-nowrap">
+                        {fmt(p.stock * p.costPrice)}
                       </td>
                     )}
                     <td className="px-3 py-2">
