@@ -75,6 +75,7 @@ export default function Products() {
   const visCols = COLS.filter(c => visible.has(c.key))
 
   const getProductVal = (p: any, key: string) => {
+    const pQty = p.packageQty || 0
     switch (key) {
       case 'image': return p.image ? '[Ảnh]' : ''
       case 'code': return p.code
@@ -83,6 +84,8 @@ export default function Products() {
       case 'category': return p.category?.name || '-'
       case 'price': return p.price
       case 'costPrice': return p.costPrice
+      case 'stockBoxes': return pQty > 0 ? Math.floor(p.stock / pQty) : '-'
+      case 'stockRem': return pQty > 0 ? p.stock % pQty : p.stock
       case 'stock': return p.stock
       default: return ''
     }
