@@ -416,88 +416,140 @@ export default function Stock() {
       {/* ── Tab: Tất cả sản phẩm ── */}
       {tab === 'all' && (
         <>
-          <div className="flex gap-2 items-center">
-            <input className="input flex-1" placeholder="Tìm theo tên, mã, thương hiệu..."
-              value={searchAll} onChange={e => setSearchAll(e.target.value)} />
+          {/* Thanh tổng hợp kho */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              { label: 'Tổng mã hàng', value: allTotals.totalSkus, unit: 'SKU', color: 'text-blue-600', bg: 'bg-blue-50' },
+              { label: 'Tổng tồn kho', value: new Intl.NumberFormat('vi-VN').format(allTotals.totalUnits), unit: 'đơn vị lẻ', color: 'text-green-600', bg: 'bg-green-50' },
+              { label: 'Quy đổi thùng', value: new Intl.NumberFormat('vi-VN').format(allTotals.totalBoxes), unit: 'thùng', color: 'text-orange-600', bg: 'bg-orange-50' },
+              { label: 'Giá trị tồn kho', value: fmt(allTotals.stockValue), unit: '(theo giá vốn)', color: 'text-purple-600', bg: 'bg-purple-50' },
+            ].map(s => (
+              <div key={s.label} className={`card flex items-center gap-3 py-3 ${s.bg}`}>
+                <div>
+                  <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
+                  <p className="text-xs text-gray-500">{s.label} <span className="text-gray-400">({s.unit})</span></p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Toolbar */}
+          <div className="flex gap-2 items-center flex-wrap">
+            <div className="relative flex-1 min-w-48">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input className="input pl-9" placeholder="Tìm theo tên, mã, thương hiệu..."
+                value={searchAll} onChange={e => { setSearchAll(e.target.value); setSelectedAllIds(new Set()) }} />
+            </div>
+            {selectedAllIds.size > 0 && (
+              <>
+                <span className="text-sm text-blue-600 font-medium whitespace-nowrap">Đã chọn {selectedAllIds.size}</span>
+                <button onClick={() => setSelectedAllIds(new Set())} className="text-xs text-gray-400 hover:text-gray-600 underline whitespace-nowrap">Bỏ chọn</button>
+              </>
+            )}
             <ColumnPicker cols={COLS_ALL} visible={visAll} onChange={setVisAll} />
             <button onClick={() => {
               const vc = COLS_ALL.filter(c => visAll.has(c.key))
-              const headers = vc.map(c => c.label)
-              const rows = (allProducts || []).map((p: any) => vc.map(c => {
-                switch (c.key) {
-                  case 'product': return p.name
-                  case 'brandMfr': return [p.brand, p.manufacturer].filter(Boolean).join(' / ')
-                  case 'specification': return p.specification || ''
-                  case 'unit': return p.unit
-                  case 'stock': return p.stock
-                  case 'minStock': return p.minStock
-                  case 'price': return p.price
-                  case 'costPrice': return p.costPrice
-                  default: return ''
-                }
-              }))
-              exportExcel('Ton-kho', 'Ton kho', headers, rows)
+              const rows = visibleAllProducts.map((p: any) => vc.map(c => getAllVal(p, c)))
+              exportExcel(`Ton-kho_${new Date().toISOString().slice(0,10)}`, 'Tồn kho', vc.map(c => c.label), rows)
             }} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 whitespace-nowrap">
-              <FileSpreadsheet size={14} /> Excel
+              <FileSpreadsheet size={14} /> {selectedAllIds.size > 0 ? `Excel (${selectedAllIds.size})` : 'Excel'}
             </button>
             <button onClick={() => {
               const vc = COLS_ALL.filter(c => visAll.has(c.key))
-              const headers = vc.map(c => c.label)
-              const rows = (allProducts || []).map((p: any) => vc.map(c => {
-                switch (c.key) {
-                  case 'product': return p.name
-                  case 'brandMfr': return [p.brand, p.manufacturer].filter(Boolean).join(' / ')
-                  case 'specification': return p.specification || ''
-                  case 'unit': return p.unit
-                  case 'stock': return p.stock
-                  case 'minStock': return p.minStock
-                  case 'price': return fmt(p.price)
-                  case 'costPrice': return fmt(p.costPrice)
-                  default: return ''
-                }
+              const rows = visibleAllProducts.map((p: any) => vc.map(c => {
+                const v = getAllVal(p, c)
+                return (c.key === 'price' || c.key === 'costPrice') && typeof v === 'number' ? fmt(v) : v
               }))
-              exportPDF('Ton-kho', 'Danh sach ton kho', `Tong: ${allProducts?.length || 0} san pham`, headers, rows)
+              exportPDF(`Ton-kho_${new Date().toISOString().slice(0,10)}`, 'Danh sách tồn kho', `Tổng: ${allProducts?.length || 0} sản phẩm | Giá trị: ${fmt(allTotals.stockValue)}`, vc.map(c => c.label), rows)
             }} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 whitespace-nowrap">
-              <FileText size={14} /> PDF
+              <FileText size={14} /> {selectedAllIds.size > 0 ? `PDF (${selectedAllIds.size})` : 'PDF'}
             </button>
           </div>
+
           <div className="card p-0 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b">
                   <tr>
+                    <th className="px-3 py-3 w-10">
+                      <input type="checkbox" className="w-4 h-4 rounded cursor-pointer accent-blue-600"
+                        checked={(allProducts?.length ?? 0) > 0 && (allProducts || []).every((p: any) => selectedAllIds.has(p.id))}
+                        onChange={e => {
+                          const ids = (allProducts || []).map((p: any) => p.id)
+                          if (e.target.checked) setSelectedAllIds(new Set(ids))
+                          else setSelectedAllIds(new Set())
+                        }} />
+                    </th>
                     {COLS_ALL.filter(c => visAll.has(c.key)).map(c => (
                       <th key={c.key} className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">{c.label}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {allProducts?.map((p: any) => (
-                    <tr key={p.id} className={`hover:bg-gray-50 ${p.stock <= p.minStock ? 'bg-yellow-50/50' : ''}`}>
-                      {visAll.has('product') && <td className="px-4 py-3"><ProductInfo product={p} /></td>}
-                      {visAll.has('brandMfr') && (
-                        <td className="px-4 py-3">
-                          {p.brand && <p className="font-medium text-sm flex items-center gap-1"><Tag size={12} className="text-purple-400" />{p.brand}</p>}
-                          {p.manufacturer && <p className="text-xs text-gray-400 flex items-center gap-1"><Building2 size={11} />{p.manufacturer}</p>}
-                          {!p.brand && !p.manufacturer && <span className="text-gray-300">—</span>}
+                  {(allProducts || []).map((p: any) => {
+                    const pQty = p.packageQty || 0
+                    const boxes = pQty > 0 ? Math.floor(p.stock / pQty) : null
+                    const rem = pQty > 0 ? p.stock % pQty : p.stock
+                    const isLow = p.stock <= p.minStock
+                    return (
+                      <tr key={p.id} className={`hover:bg-gray-50 ${selectedAllIds.has(p.id) ? 'bg-blue-50' : isLow ? 'bg-yellow-50/50' : ''}`}>
+                        <td className="px-3 py-2">
+                          <input type="checkbox" className="w-4 h-4 rounded cursor-pointer accent-blue-600"
+                            checked={selectedAllIds.has(p.id)}
+                            onChange={e => setSelectedAllIds(prev => { const s = new Set(prev); e.target.checked ? s.add(p.id) : s.delete(p.id); return s })} />
                         </td>
-                      )}
-                      {visAll.has('specification') && <td className="px-4 py-3 text-gray-500 text-xs">{p.specification || '—'}</td>}
-                      {visAll.has('unit') && <td className="px-4 py-3 text-gray-500">{p.unit}</td>}
-                      {visAll.has('stock') && (
-                        <td className="px-4 py-3">
-                          <span className={`badge ${p.stock === 0 ? 'badge-red' : p.stock <= p.minStock ? 'badge-yellow' : 'badge-green'}`}>
-                            {p.stock}
-                          </span>
-                        </td>
-                      )}
-                      {visAll.has('minStock') && <td className="px-4 py-3 text-gray-400">{p.minStock}</td>}
-                      {visAll.has('price') && <td className="px-4 py-3 text-blue-600 font-medium whitespace-nowrap">{fmt(p.price)}</td>}
-                      {visAll.has('costPrice') && <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{fmt(p.costPrice)}</td>}
-                    </tr>
-                  ))}
-                  {!allProducts?.length && <tr><td colSpan={COLS_ALL.filter(c => visAll.has(c.key)).length} className="text-center py-10 text-gray-400">Không có sản phẩm</td></tr>}
+                        {visAll.has('product') && <td className="px-4 py-3"><ProductInfo product={p} /></td>}
+                        {visAll.has('code') && <td className="px-4 py-3 font-mono text-xs text-gray-500">{p.code}</td>}
+                        {visAll.has('brandMfr') && (
+                          <td className="px-4 py-3">
+                            {p.brand && <p className="font-medium text-sm flex items-center gap-1"><Tag size={12} className="text-purple-400" />{p.brand}</p>}
+                            {p.manufacturer && <p className="text-xs text-gray-400 flex items-center gap-1"><Building2 size={11} />{p.manufacturer}</p>}
+                            {!p.brand && !p.manufacturer && <span className="text-gray-300">—</span>}
+                          </td>
+                        )}
+                        {visAll.has('packageUnit') && <td className="px-4 py-3 text-gray-500 text-center">{p.packageUnit || <span className="text-gray-300">—</span>}</td>}
+                        {visAll.has('packageQty') && <td className="px-4 py-3 text-gray-500 text-center">{pQty || <span className="text-gray-300">—</span>}</td>}
+                        {visAll.has('unit') && <td className="px-4 py-3 text-gray-500">{p.unit}</td>}
+                        {visAll.has('stockBoxes') && (
+                          <td className="px-4 py-3 text-right font-semibold">
+                            {boxes !== null ? <span className="text-gray-800">{boxes}</span> : <span className="text-gray-300">—</span>}
+                          </td>
+                        )}
+                        {visAll.has('stockRem') && (
+                          <td className="px-4 py-3 text-right font-semibold">
+                            <span className={rem === 0 ? 'text-gray-400' : 'text-gray-800'}>{rem}</span>
+                          </td>
+                        )}
+                        {visAll.has('stock') && (
+                          <td className="px-4 py-3 text-right">
+                            <span className={`badge ${p.stock === 0 ? 'badge-red' : isLow ? 'badge-yellow' : 'badge-green'}`}>{p.stock}</span>
+                          </td>
+                        )}
+                        {visAll.has('minStock') && <td className="px-4 py-3 text-gray-400 text-right">{p.minStock}</td>}
+                        {visAll.has('price') && <td className="px-4 py-3 text-blue-600 font-medium whitespace-nowrap text-right">{fmt(p.price)}</td>}
+                        {visAll.has('costPrice') && <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-right">{fmt(p.costPrice)}</td>}
+                      </tr>
+                    )
+                  })}
+                  {!allProducts?.length && (
+                    <tr><td colSpan={COLS_ALL.filter(c => visAll.has(c.key)).length + 1} className="text-center py-10 text-gray-400">Không có sản phẩm</td></tr>
+                  )}
                 </tbody>
+                {(allProducts?.length ?? 0) > 0 && (
+                  <tfoot className="bg-gray-50 border-t font-semibold text-sm">
+                    <tr>
+                      <td colSpan={COLS_ALL.filter(c => visAll.has(c.key) && !['stockBoxes','stockRem','stock','minStock','price','costPrice'].includes(c.key)).length + 1} className="px-4 py-3 text-gray-600">
+                        Tổng ({allProducts?.length} mã hàng)
+                      </td>
+                      {visAll.has('stockBoxes') && <td className="px-4 py-3 text-right text-orange-600">{new Intl.NumberFormat('vi-VN').format(allTotals.totalBoxes)}</td>}
+                      {visAll.has('stockRem') && <td className="px-4 py-3 text-right text-gray-500">—</td>}
+                      {visAll.has('stock') && <td className="px-4 py-3 text-right text-green-700">{new Intl.NumberFormat('vi-VN').format(allTotals.totalUnits)}</td>}
+                      {visAll.has('minStock') && <td />}
+                      {visAll.has('price') && <td />}
+                      {visAll.has('costPrice') && <td className="px-4 py-3 text-right text-purple-600">{fmt(allTotals.stockValue)}</td>}
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             </div>
           </div>
