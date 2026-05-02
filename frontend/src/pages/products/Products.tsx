@@ -473,6 +473,10 @@ export default function Products() {
         />
       )}
 
+      {adjustProduct && (
+        <StockAdjustModal product={adjustProduct} onClose={() => setAdjustProduct(null)} />
+      )}
+
       {/* ==================== Modal form thêm/sửa ==================== */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
