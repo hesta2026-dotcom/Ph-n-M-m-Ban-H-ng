@@ -573,7 +573,7 @@ export default function Stock() {
                 {(allProducts?.length ?? 0) > 0 && (
                   <tfoot className="bg-gray-50 border-t font-semibold text-sm">
                     <tr>
-                      <td colSpan={COLS_ALL.filter(c => visAll.has(c.key) && !['stockBoxes','stockRem','stockValueCost','stockValueSell','minStock','price','costPrice'].includes(c.key)).length + 1} className="px-4 py-3 text-gray-600">
+                      <td colSpan={COLS_ALL.filter(c => visAll.has(c.key) && !['stockBoxes','stockRem','stockValueCost','stockValueSell','price','costPrice'].includes(c.key)).length + 1} className="px-4 py-3 text-gray-600">
                         Tổng ({allProducts?.length} mã hàng)
                       </td>
                       {visAll.has('stockBoxes') && <td className="px-4 py-3 text-right text-orange-600">{new Intl.NumberFormat('vi-VN').format(allTotals.totalBoxes)}</td>}
