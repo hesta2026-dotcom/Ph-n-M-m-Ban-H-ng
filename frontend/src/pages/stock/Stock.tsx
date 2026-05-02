@@ -554,7 +554,7 @@ export default function Stock() {
                     )
                   })}
                   {!allProducts?.length && (
-                    <tr><td colSpan={COLS_ALL.filter(c => visAll.has(c.key)).length + 1} className="text-center py-10 text-gray-400">Không có sản phẩm</td></tr>
+                    <tr><td colSpan={COLS_ALL.filter(c => visAll.has(c.key)).length + 2} className="text-center py-10 text-gray-400">Không có sản phẩm</td></tr>
                   )}
                 </tbody>
                 {(allProducts?.length ?? 0) > 0 && (
