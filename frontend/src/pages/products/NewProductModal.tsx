@@ -9,6 +9,8 @@ const SMALL_UNITS = ['cái','chai','dây','bịch','gói','lon','lọ','túi','c
 const BIG_UNITS   = ['thùng','hộp','kiện','bộ','bao','lốc','vỉ','bịch']
 const fmtMoney = (n: number) => n === 0 ? '' : n.toLocaleString('vi-VN')
 const parseMoney = (s: string) => +s.replace(/[^0-9]/g, '') || 0
+const MARGIN = 1.065
+const suggestPrice = (cost: number) => cost > 0 ? Math.round(cost * MARGIN / 500) * 500 : 0
 
 const emptyForm = {
   name: '', code: '', barcode: '', price: 0, costPrice: 0,
