@@ -455,6 +455,10 @@ export default function Stock() {
               <>
                 <span className="text-sm text-blue-600 font-medium whitespace-nowrap">Đã chọn {selectedAllIds.size}</span>
                 <button onClick={() => setSelectedAllIds(new Set())} className="text-xs text-gray-400 hover:text-gray-600 underline whitespace-nowrap">Bỏ chọn</button>
+                <button onClick={delAllBulk}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 whitespace-nowrap">
+                  <Trash2 size={14} /> Xóa ({selectedAllIds.size})
+                </button>
               </>
             )}
             <ColumnPicker cols={COLS_ALL} visible={visAll} onChange={setVisAll} />
