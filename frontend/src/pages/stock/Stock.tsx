@@ -484,7 +484,7 @@ export default function Stock() {
               const vc = COLS_ALL.filter(c => visAll.has(c.key))
               const rows = visibleAllProducts.map((p: any) => vc.map(c => {
                 const v = getAllVal(p, c.key)
-                return (c.key === 'price' || c.key === 'costPrice') && typeof v === 'number' ? fmt(v) : v
+                return (['price','costPrice','stockValueCost','stockValueSell'].includes(c.key)) && typeof v === 'number' ? fmt(v) : v
               }))
               exportPDF(`Ton-kho_${new Date().toISOString().slice(0,10)}`, 'Danh sách tồn kho', `Tổng: ${allProducts?.length || 0} sản phẩm | Nhập: ${fmt(allTotals.stockValueCost)} | Bán: ${fmt(allTotals.stockValueSell)}`, vc.map(c => c.label), rows)
             }} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 whitespace-nowrap">
