@@ -288,4 +288,31 @@ router.delete('/:id', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
+// ── Điều chỉnh tồn kho ──
+router.patch('/:id/stock', auth, async (req, res) => {
+  try {
+    const { type, qty, note } = req.body;
+    // type: ADJUST_ADD | ADJUST_REMOVE | ADJUST_SET
+    const product = await prisma.product.findUnique({ where: { id: req.params.id } });
+    if (!product) return res.status(404).json({ message: 'Không tìm thấy sản phẩm' });
+    const before = product.stock;
+    let after;
+    if (type === 'ADJUST_SET') {
+      after = +qty;
+    } else if (type === 'ADJUST_ADD') {
+      after = before + +qty;
+    } else if (type === 'ADJUST_REMOVE') {
+      after = before - +qty;
+      if (after < 0) return res.status(400).json({ message: 'Tồn kho không đủ để xuất' });
+    } else {
+      return res.status(400).json({ message: 'Loại điều chỉnh không hợp lệ' });
+    }
+    const [updated] = await prisma.$transaction([
+      prisma.product.update({ where: { id: req.params.id }, data: { stock: after } }),
+      prisma.stockLog.create({ data: { productId: req.params.id, type, qty: +qty, before, after, note: note || null } })
+    ]);
+    res.json(updated);
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
 module.exports = router;
