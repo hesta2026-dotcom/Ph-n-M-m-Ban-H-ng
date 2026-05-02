@@ -165,6 +165,11 @@ export default function Stock() {
     queryKey: ['suppliers'],
     queryFn: () => api.get('/suppliers').then(r => r.data)
   })
+  const { data: suggestions, isLoading: suggestLoading } = useQuery({
+    queryKey: ['stock-suggestions'],
+    queryFn: () => api.get('/stock/suggestions').then(r => r.data),
+    enabled: tab === 'suggest'
+  })
 
   const adjust = useMutation({
     mutationFn: (d: any) => api.post('/stock/adjust', d),
