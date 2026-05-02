@@ -88,7 +88,7 @@ export default function Products() {
       case 'costPrice': return p.costPrice
       case 'stockBoxes': return pQty > 0 ? Math.floor(p.stock / pQty) : '-'
       case 'stockRem': return pQty > 0 ? p.stock % pQty : p.stock
-      case 'stock': return p.stock * p.costPrice
+      case 'stock': return pQty > 0 ? (p.stock / pQty) * p.costPrice : p.stock * p.costPrice
       default: return ''
     }
   }
