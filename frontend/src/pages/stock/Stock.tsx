@@ -706,6 +706,16 @@ export default function Stock() {
         </div>
       )}
 
+      {/* ── Tab: Gợi ý nhập hàng ── */}
+      {tab === 'suggest' && (
+        <SuggestTab suggestions={suggestions} suggestLoading={suggestLoading}
+          onCreatePurchase={(items) => {
+            setPurchaseForm(f => ({ ...f, items: items.map((s: any) => ({ productId: s.id, productName: s.name, qty: s.suggestedQty, costPrice: s.costPrice, unit: s.unit })) }))
+            setShowPurchase(true)
+            setTab('purchase')
+          }} />
+      )}
+
       {/* ── Tab: Phiếu nhập ── */}
       {tab === 'purchase' && (
         <div className="card p-0 overflow-hidden">
