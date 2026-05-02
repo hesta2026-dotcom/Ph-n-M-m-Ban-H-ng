@@ -179,7 +179,7 @@ export default function SuggestTab({ suggestions, suggestLoading, onCreatePurcha
                         )}
                       </td>
                       <td className="px-4 py-3 text-right text-purple-600 font-medium whitespace-nowrap">
-                        {fmt(s.suggestedQty * s.costPrice)}
+                        {fmt(calcValue(s))}
                       </td>
                     </tr>
                   )
