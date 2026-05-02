@@ -20,7 +20,7 @@ const COLS: ColDef[] = [
   { key: 'costPrice', label: 'Giá vốn' },
   { key: 'stockBoxes', label: 'Tồn (thùng)' },
   { key: 'stockRem', label: 'Tồn (lẻ)' },
-  { key: 'stock', label: 'Tổng tồn' },
+  { key: 'stock', label: 'Giá trị tồn kho' },
 ]
 
 const emptyForm = {
