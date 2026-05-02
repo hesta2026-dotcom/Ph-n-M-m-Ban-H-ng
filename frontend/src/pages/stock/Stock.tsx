@@ -30,7 +30,6 @@ const COLS_ALL: ColDef[] = [
   { key: 'unit', label: 'ĐVT lẻ' },
   { key: 'stockBoxes', label: 'Tồn (thùng)' },
   { key: 'stockRem', label: 'Tồn (lẻ)' },
-  { key: 'stock', label: 'Tổng tồn' },
   { key: 'minStock', label: 'Tối thiểu' },
   { key: 'price', label: 'Giá bán' },
   { key: 'costPrice', label: 'Giá vốn' },
