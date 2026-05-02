@@ -571,7 +571,7 @@ export default function Stock() {
                 {(allProducts?.length ?? 0) > 0 && (
                   <tfoot className="bg-gray-50 border-t font-semibold text-sm">
                     <tr>
-                      <td colSpan={COLS_ALL.filter(c => visAll.has(c.key) && !['stockBoxes','stockRem','stock','minStock','price','costPrice'].includes(c.key)).length + 1} className="px-4 py-3 text-gray-600">
+                      <td colSpan={COLS_ALL.filter(c => visAll.has(c.key) && !['stockBoxes','stockRem','stock','minStock','price','costPrice','stockValueCost','stockValueSell'].includes(c.key)).length + 1} className="px-4 py-3 text-gray-600">
                         Tổng ({allProducts?.length} mã hàng)
                       </td>
                       {visAll.has('stockBoxes') && <td className="px-4 py-3 text-right text-orange-600">{new Intl.NumberFormat('vi-VN').format(allTotals.totalBoxes)}</td>}
@@ -579,7 +579,9 @@ export default function Stock() {
                       {visAll.has('stock') && <td className="px-4 py-3 text-right text-green-700">{new Intl.NumberFormat('vi-VN').format(allTotals.totalUnits)}</td>}
                       {visAll.has('minStock') && <td />}
                       {visAll.has('price') && <td />}
-                      {visAll.has('costPrice') && <td className="px-4 py-3 text-right text-purple-600">{fmt(allTotals.stockValue)}</td>}
+                      {visAll.has('costPrice') && <td />}
+                      {visAll.has('stockValueCost') && <td className="px-4 py-3 text-right text-purple-600">{fmt(allTotals.stockValueCost)}</td>}
+                      {visAll.has('stockValueSell') && <td className="px-4 py-3 text-right text-blue-700">{fmt(allTotals.stockValueSell)}</td>}
                       <td />
                     </tr>
                   </tfoot>
