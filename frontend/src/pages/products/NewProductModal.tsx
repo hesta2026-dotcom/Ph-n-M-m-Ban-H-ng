@@ -33,8 +33,22 @@ export default function NewProductModal({ onClose, onCreated, defaultSupplierId 
   const [form, setForm] = useState({ ...emptyForm, supplierId: defaultSupplierId })
   const [uploading, setUploading] = useState(false)
   const [showNewCategory, setShowNewCategory] = useState(false)
+  const [priceAutoSet, setPriceAutoSet] = useState(false)
 
   const set = (key: string, val: any) => setForm(f => ({ ...f, [key]: val }))
+
+  const handleCostPriceChange = (val: number) => {
+    set('costPrice', val)
+    if (priceAutoSet || form.price === 0) {
+      set('price', suggestPrice(val))
+      setPriceAutoSet(true)
+    }
+  }
+
+  const handlePriceChange = (val: number) => {
+    set('price', val)
+    setPriceAutoSet(val === suggestPrice(form.costPrice))
+  }
 
   const { data: categories } = useQuery({ queryKey: ['categories'], queryFn: () => api.get('/categories').then(r => r.data) })
   const { data: suppliers } = useQuery({ queryKey: ['suppliers'], queryFn: () => api.get('/suppliers').then(r => r.data) })
