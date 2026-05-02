@@ -297,6 +297,17 @@ export default function Stock() {
     }
   }
 
+  const delAllBulk = async () => {
+    if (!confirm(`Xóa ${selectedAllIds.size} sản phẩm đã chọn? Thao tác không thể hoàn tác.`)) return
+    try {
+      await Promise.allSettled([...selectedAllIds].map(id => api.delete(`/products/${id}`)))
+      toast.success(`Đã xóa ${selectedAllIds.size} sản phẩm`)
+      setSelectedAllIds(new Set())
+      qc.invalidateQueries({ queryKey: ['stock-all'] })
+      qc.invalidateQueries({ queryKey: ['products'] })
+    } catch { toast.error('Có lỗi khi xóa') }
+  }
+
   const visibleAllProducts = selectedAllIds.size > 0
     ? (allProducts || []).filter((p: any) => selectedAllIds.has(p.id))
     : (allProducts || [])
