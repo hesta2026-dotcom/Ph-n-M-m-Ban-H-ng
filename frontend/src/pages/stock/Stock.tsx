@@ -711,7 +711,12 @@ export default function Stock() {
       {tab === 'suggest' && (
         <SuggestTab suggestions={suggestions} suggestLoading={suggestLoading}
           onCreatePurchase={(items) => {
-            setPurchaseForm(f => ({ ...f, items: items.map((s: any) => ({ productId: s.id, productName: s.name, qty: s.suggestedQty, costPrice: s.costPrice, unit: s.unit })) }))
+            const supplierId = items.every((s: any) => s.supplierId === items[0].supplierId) ? items[0].supplierId : ''
+            setPurchaseForm({
+              supplierId: supplierId || '',
+              paid: 0, note: 'Nhập theo gợi ý hệ thống',
+              items: items.map((s: any) => ({ productId: s.id, qty: s.suggestedQty, costPrice: s.costPrice }))
+            })
             setShowPurchase(true)
             setTab('purchase')
           }} />
