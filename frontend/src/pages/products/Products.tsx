@@ -50,6 +50,7 @@ export default function Products() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [inlineUploadId, setInlineUploadId] = useState<string | null>(null)
   const [showNewCategory, setShowNewCategory] = useState(false)
+  const [adjustProduct, setAdjustProduct] = useState<any>(null)
   const [visible, setVisible] = useState<Set<string>>(() => new Set(COLS.map(c => c.key)))
   const fileRef = useRef<HTMLInputElement>(null)
   const importRef = useRef<HTMLInputElement>(null)
