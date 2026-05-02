@@ -6,6 +6,7 @@ import { AlertTriangle, Plus, Package, Tag, Building2, X, PackagePlus, FileSprea
 import { exportExcel, exportPDF, PRESETS, fmtPeriod } from '../../utils/export'
 import NewProductModal from '../products/NewProductModal'
 import NewSupplierModal from '../suppliers/NewSupplierModal'
+import SuggestTab from './SuggestTab'
 import ColumnPicker, { ColDef } from '../../components/ColumnPicker'
 
 const fmt = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
