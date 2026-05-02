@@ -406,7 +406,7 @@ export default function Products() {
                     )}
                     {visible.has('stock') && (
                       <td className="px-3 py-2 text-right font-semibold text-purple-700 whitespace-nowrap">
-                        {fmt(p.stock * p.costPrice)}
+                        {fmt(p.packageQty > 0 ? (p.stock / p.packageQty) * p.costPrice : p.stock * p.costPrice)}
                       </td>
                     )}
                     <td className="px-3 py-2">
