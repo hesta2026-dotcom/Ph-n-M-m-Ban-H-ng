@@ -12,10 +12,10 @@ export default function Dashboard() {
   if (isLoading) return <div className="flex items-center justify-center h-64"><div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" /></div>
 
   const stats = [
-    { label: 'Doanh thu hôm nay', value: fmt(data?.todayRevenue || 0), icon: TrendingUp, color: 'bg-green-500', bg: 'bg-green-50' },
-    { label: 'Đơn hàng hôm nay', value: data?.todayOrders || 0, icon: ShoppingCart, color: 'bg-blue-500', bg: 'bg-blue-50' },
-    { label: 'Tổng sản phẩm', value: data?.totalProducts || 0, icon: Package, color: 'bg-purple-500', bg: 'bg-purple-50' },
-    { label: 'Tổng khách hàng', value: data?.totalCustomers || 0, icon: Users, color: 'bg-orange-500', bg: 'bg-orange-50' },
+    { label: 'Doanh thu hôm nay', value: fmt(data?.todayRevenue || 0), icon: TrendingUp, iconColor: 'text-green-600', bg: 'bg-green-50' },
+    { label: 'Đơn hàng hôm nay', value: data?.todayOrders || 0, icon: ShoppingCart, iconColor: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Tổng sản phẩm', value: data?.totalProducts || 0, icon: Package, iconColor: 'text-purple-600', bg: 'bg-purple-50' },
+    { label: 'Tổng khách hàng', value: data?.totalCustomers || 0, icon: Users, iconColor: 'text-orange-600', bg: 'bg-orange-50' },
   ]
 
   return (
@@ -27,10 +27,10 @@ export default function Dashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map(({ label, value, icon: Icon, color, bg }) => (
+        {stats.map(({ label, value, icon: Icon, iconColor, bg }) => (
           <div key={label} className="card flex items-center gap-4">
             <div className={`${bg} p-3 rounded-xl`}>
-              <Icon className={`${color} text-white`} size={24} style={{ background: 'transparent' }} />
+              <Icon className={iconColor} size={24} />
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">{value}</p>

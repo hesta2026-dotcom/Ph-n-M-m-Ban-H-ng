@@ -208,7 +208,10 @@ router.get('/', auth, async (req, res) => {
     ];
     if (categoryId) where.categoryId = categoryId;
     if (supplierId) where.supplierId = supplierId;
-    if (lowStock === 'true') where.stock = { lte: 5 };
+    if (lowStock === 'true') {
+      const ids = await prisma.$queryRaw`SELECT id FROM Product WHERE isActive = 1 AND stock <= minStock`;
+      where.id = { in: ids.map(r => r.id) };
+    }
     const [products, total] = await Promise.all([
       prisma.product.findMany({ where, include: { category: true, supplier: true }, skip: (page - 1) * +limit, take: +limit, orderBy: { name: 'asc' } }),
       prisma.product.count({ where })

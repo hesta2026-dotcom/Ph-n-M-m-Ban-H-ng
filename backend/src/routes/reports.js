@@ -8,14 +8,15 @@ router.get('/dashboard', auth, async (req, res) => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const [todayOrders, todayRevenue, totalProducts, lowStock, totalCustomers, recentOrders] = await Promise.all([
+    const [todayOrders, todayRevenue, totalProducts, totalCustomers, recentOrders, lowStockRaw] = await Promise.all([
       prisma.order.count({ where: { createdAt: { gte: today, lt: tomorrow }, status: 'COMPLETED' } }),
       prisma.order.aggregate({ where: { createdAt: { gte: today, lt: tomorrow }, status: 'COMPLETED' }, _sum: { total: true } }),
       prisma.product.count({ where: { isActive: true } }),
-      prisma.product.count({ where: { isActive: true, stock: { lte: 5 } } }),
       prisma.customer.count(),
-      prisma.order.findMany({ where: { status: 'COMPLETED' }, include: { customer: true }, orderBy: { createdAt: 'desc' }, take: 5 })
+      prisma.order.findMany({ where: { status: 'COMPLETED' }, include: { customer: true }, orderBy: { createdAt: 'desc' }, take: 5 }),
+      prisma.$queryRaw`SELECT COUNT(*) as cnt FROM Product WHERE isActive = 1 AND stock <= minStock`
     ]);
+    const lowStock = Number(lowStockRaw[0]?.cnt ?? 0);
 
     res.json({
       todayOrders,

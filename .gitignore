@@ -32,3 +32,6 @@ Thumbs.db
 
 # Uploads
 backend/uploads/
+
+# Backup data được track bởi git (KHÔNG ignore)
+# backup/data.json → được commit để đồng bộ qua máy
