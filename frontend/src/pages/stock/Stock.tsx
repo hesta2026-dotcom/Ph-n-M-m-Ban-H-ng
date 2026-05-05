@@ -325,8 +325,8 @@ export default function Stock() {
     acc.totalSkus += 1
     acc.totalUnits += p.stock
     acc.totalBoxes += pQty > 0 ? Math.floor(p.stock / pQty) : 0
-    acc.stockValueCost += pQty > 0 ? (p.stock / pQty) * p.costPrice : p.stock * p.costPrice
-    acc.stockValueSell += pQty > 0 ? (p.stock / pQty) * p.price : p.stock * p.price
+    acc.stockValueCost += p.stock * p.costPrice
+    acc.stockValueSell += p.stock * p.price
     return acc
   }, { totalSkus: 0, totalUnits: 0, totalBoxes: 0, stockValueCost: 0, stockValueSell: 0 })
 
