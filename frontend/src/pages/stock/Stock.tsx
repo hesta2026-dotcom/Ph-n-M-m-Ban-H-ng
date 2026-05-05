@@ -125,6 +125,8 @@ export default function Stock() {
   const [filterWhStatus, setFilterWhStatus] = useState('')
   const [selectedExportIds, setSelectedExportIds] = useState<Set<string>>(new Set())
   const [selectedAllIds, setSelectedAllIds] = useState<Set<string>>(new Set())
+  const [pageAll, setPageAll] = useState(1)
+  const PAGE_SIZE_ALL = 50
   const [exportSlipMode, setExportSlipMode] = useState<'total' | 'detail' | null>(null)
   const [visExport, setVisExport] = useState<Set<string>>(() => new Set(COLS_EXPORT.map(c => c.key)))
   const exportSlipRef = useRef<HTMLDivElement>(null)
