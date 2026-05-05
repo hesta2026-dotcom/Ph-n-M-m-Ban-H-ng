@@ -463,7 +463,7 @@ export default function Stock() {
             <div className="relative flex-1 min-w-48">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input className="input pl-9" placeholder="Tìm theo tên, mã, thương hiệu..."
-                value={searchAll} onChange={e => { setSearchAll(e.target.value); setSelectedAllIds(new Set()) }} />
+                value={searchAll} onChange={e => { setSearchAll(e.target.value); setSelectedAllIds(new Set()); setPageAll(1) }} />
             </div>
             {selectedAllIds.size > 0 && (
               <>
