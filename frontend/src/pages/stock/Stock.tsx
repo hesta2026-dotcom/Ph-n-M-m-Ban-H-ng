@@ -142,7 +142,7 @@ export default function Stock() {
   })
   const { data: allProducts } = useQuery({
     queryKey: ['stock-all', searchAll],
-    queryFn: () => api.get(`/products?search=${searchAll}&limit=100`).then(r => r.data.data),
+    queryFn: () => api.get(`/products?search=${searchAll}&limit=9999`).then(r => r.data.data),
     enabled: tab === 'all'
   })
   const { data: logs } = useQuery({
