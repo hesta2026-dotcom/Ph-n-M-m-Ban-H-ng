@@ -322,6 +322,9 @@ export default function Stock() {
     ? (allProducts || []).filter((p: any) => selectedAllIds.has(p.id))
     : (allProducts || [])
 
+  const totalPagesAll = Math.ceil((allProducts?.length || 0) / PAGE_SIZE_ALL)
+  const pagedAllProducts = (allProducts || []).slice((pageAll - 1) * PAGE_SIZE_ALL, pageAll * PAGE_SIZE_ALL)
+
   const allTotals = (allProducts || []).reduce((acc: any, p: any) => {
     const pQty = p.packageQty || 0
     acc.totalSkus += 1
