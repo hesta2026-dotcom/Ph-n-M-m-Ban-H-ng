@@ -552,7 +552,7 @@ export default function Stock() {
                         )}
                         {visAll.has('stockValueSell') && (
                           <td className="px-4 py-3 text-right font-semibold text-blue-700 whitespace-nowrap">
-                            {fmt(pQty > 0 ? (p.stock / pQty) * p.price : p.stock * p.price)}
+                            {fmt(p.stock * p.price)}
                           </td>
                         )}
                         {visAll.has('price') && <td className="px-4 py-3 text-blue-600 font-medium whitespace-nowrap text-right">{fmt(p.price)}</td>}
