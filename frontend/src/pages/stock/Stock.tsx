@@ -516,7 +516,7 @@ export default function Stock() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {(allProducts || []).map((p: any) => {
+                  {pagedAllProducts.map((p: any) => {
                     const pQty = p.packageQty || 0
                     const boxes = pQty > 0 ? Math.floor(p.stock / pQty) : null
                     const rem = pQty > 0 ? p.stock % pQty : p.stock
