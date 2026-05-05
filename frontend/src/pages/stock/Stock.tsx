@@ -594,6 +594,37 @@ export default function Stock() {
               </table>
             </div>
           </div>
+
+          {/* Phân trang */}
+          {totalPagesAll > 1 && (
+            <div className="flex items-center justify-between text-sm text-gray-500">
+              <span>
+                Hiển thị {(pageAll - 1) * PAGE_SIZE_ALL + 1}–{Math.min(pageAll * PAGE_SIZE_ALL, allProducts?.length || 0)} / {allProducts?.length || 0} sản phẩm
+              </span>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setPageAll(1)} disabled={pageAll === 1}
+                  className="px-2 py-1 rounded border disabled:opacity-30 hover:bg-gray-100">«</button>
+                <button onClick={() => setPageAll(p => Math.max(1, p - 1))} disabled={pageAll === 1}
+                  className="px-2 py-1 rounded border disabled:opacity-30 hover:bg-gray-100">‹</button>
+                {Array.from({ length: totalPagesAll }, (_, i) => i + 1)
+                  .filter(n => n === 1 || n === totalPagesAll || Math.abs(n - pageAll) <= 2)
+                  .reduce<(number | '...')[]>((acc, n, idx, arr) => {
+                    if (idx > 0 && n - (arr[idx - 1] as number) > 1) acc.push('...')
+                    acc.push(n)
+                    return acc
+                  }, [])
+                  .map((n, i) => n === '...'
+                    ? <span key={`ellipsis-${i}`} className="px-2">…</span>
+                    : <button key={n} onClick={() => setPageAll(n as number)}
+                        className={`px-2.5 py-1 rounded border ${pageAll === n ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-100'}`}>{n}</button>
+                  )}
+                <button onClick={() => setPageAll(p => Math.min(totalPagesAll, p + 1))} disabled={pageAll === totalPagesAll}
+                  className="px-2 py-1 rounded border disabled:opacity-30 hover:bg-gray-100">›</button>
+                <button onClick={() => setPageAll(totalPagesAll)} disabled={pageAll === totalPagesAll}
+                  className="px-2 py-1 rounded border disabled:opacity-30 hover:bg-gray-100">»</button>
+              </div>
+            </div>
+          )}
         </>
       )}
 
