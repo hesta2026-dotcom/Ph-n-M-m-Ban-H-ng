@@ -140,11 +140,23 @@ export default function NewProductModal({ onClose, onCreated, defaultSupplierId 
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Tên sản phẩm *</label>
-                <input className="input" required value={form.name} onChange={e => set('name', e.target.value)} placeholder="Nhập tên sản phẩm" />
+                <input className="input" required value={form.name}
+                  onChange={e => {
+                    const name = e.target.value
+                    set('name', name)
+                    if (codeAutoSet) set('code', generateCode(name))
+                  }}
+                  placeholder="Nhập tên sản phẩm" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Mã sản phẩm *</label>
-                <input className="input" required value={form.code} onChange={e => set('code', e.target.value)} placeholder="VD: SP001" />
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Mã sản phẩm *
+                  {codeAutoSet && form.code && <span className="ml-2 text-xs text-blue-500 font-normal">tự động</span>}
+                </label>
+                <input className="input" required value={form.code}
+                  onChange={e => { set('code', e.target.value.toUpperCase()); setCodeAutoSet(false) }}
+                  onFocus={() => { if (codeAutoSet && !form.code) setCodeAutoSet(true) }}
+                  placeholder="VD: SP001" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Barcode</label>
