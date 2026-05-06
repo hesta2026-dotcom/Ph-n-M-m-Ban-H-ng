@@ -140,11 +140,11 @@ export default function Products() {
       fd.append('file', file)
       const res = await api.post('/products/import', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       setImportResult(res.data)
+      qc.invalidateQueries({ queryKey: ['products'] })
       if (res.data.created > 0) {
         toast.success(`Đã import ${res.data.created} sản phẩm`)
-        qc.invalidateQueries({ queryKey: ['products'] })
       } else {
-        toast.error('Không có sản phẩm nào được thêm')
+        toast.error('Không có sản phẩm nào được thêm mới')
       }
     } catch (e: any) {
       toast.error(e.response?.data?.message || 'Lỗi import file')
