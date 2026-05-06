@@ -1,6 +1,9 @@
 import axios from 'axios'
 
-const api = axios.create({ baseURL: '/api' })
+// Dùng VITE_API_URL trong production (Railway/Render), fallback về /api khi dev
+const baseURL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api'
+
+const api = axios.create({ baseURL, withCredentials: true })
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')

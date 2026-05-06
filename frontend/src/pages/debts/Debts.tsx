@@ -42,19 +42,24 @@ export default function Debts() {
     const [f, t] = p.getDates(); setFrom(f); setTo(t); setActivePreset(p.label)
   }
 
+  // Chỉ lọc theo ngày khi xem công nợ ĐÃ THANH TOÁN — công nợ chưa trả luôn hiển thị toàn bộ
+  const applyDateFilter = status === 'PAID'
   const { data } = useQuery({
-    queryKey: ['debts', type, status, from, to],
-    queryFn: () => api.get(`/debts?type=${type}&status=${status}&from=${from}&to=${to}&limit=200`).then(r => r.data)
+    queryKey: ['debts', type, status, applyDateFilter ? from : null, applyDateFilter ? to : null],
+    queryFn: () => {
+      const dateParams = applyDateFilter ? `&from=${from}&to=${to}` : ''
+      return api.get(`/debts?type=${type}&status=${status}${dateParams}&limit=500`).then(r => r.data)
+    }
   })
 
   const { data: summary } = useQuery({
     queryKey: ['debts-summary'],
     queryFn: async () => {
       const [supUnpaid, supPartial, cusUnpaid, cusPartial] = await Promise.all([
-        api.get('/debts?type=SUPPLIER&status=UNPAID&limit=100').then(r => r.data),
-        api.get('/debts?type=SUPPLIER&status=PARTIAL&limit=100').then(r => r.data),
-        api.get('/debts?type=CUSTOMER&status=UNPAID&limit=100').then(r => r.data),
-        api.get('/debts?type=CUSTOMER&status=PARTIAL&limit=100').then(r => r.data),
+        api.get('/debts?type=SUPPLIER&status=UNPAID&limit=1000').then(r => r.data),
+        api.get('/debts?type=SUPPLIER&status=PARTIAL&limit=1000').then(r => r.data),
+        api.get('/debts?type=CUSTOMER&status=UNPAID&limit=1000').then(r => r.data),
+        api.get('/debts?type=CUSTOMER&status=PARTIAL&limit=1000').then(r => r.data),
       ])
       const supAll = [...(supUnpaid.data ?? []), ...(supPartial.data ?? [])]
       const cusAll = [...(cusUnpaid.data ?? []), ...(cusPartial.data ?? [])]
@@ -97,10 +102,16 @@ export default function Debts() {
   })
 
   const payBulk = useMutation({
-    mutationFn: (ids: string[]) =>
-      Promise.all(ids.map(id => api.post(`/debts/${id}/pay`, { amount: payAmount[id] || 0 }).catch(() => null))),
-    onSuccess: () => {
-      toast.success(`Đã thanh toán ${selectedIds.size} khoản`)
+    mutationFn: async (ids: string[]) => {
+      const results = await Promise.allSettled(
+        ids.map(id => api.post(`/debts/${id}/pay`, { amount: payAmount[id] || 0 }))
+      )
+      const failed = results.filter(r => r.status === 'rejected').length
+      return { total: ids.length, failed }
+    },
+    onSuccess: ({ total, failed }) => {
+      if (failed === 0) toast.success(`Đã thanh toán ${total} khoản`)
+      else toast.error(`${total - failed}/${total} khoản thành công, ${failed} khoản lỗi`)
       qc.invalidateQueries({ queryKey: ['debts'] })
       qc.invalidateQueries({ queryKey: ['debts-summary'] })
       setSelectedIds(new Set())
@@ -199,24 +210,30 @@ export default function Debts() {
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Công nợ</h1>
 
-      <div className="card py-3">
-        <div className="flex items-center flex-wrap gap-3">
-          <div className="flex gap-1.5 flex-wrap">
-            {PRESETS.map(p => (
-              <button key={p.label} onClick={() => applyPreset(p)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activePreset === p.label ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}>
-                {p.label}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-2 ml-auto flex-wrap">
-            <span className="text-sm text-gray-500">Từ:</span>
-            <input type="date" className="input text-sm py-1.5" value={from} onChange={e => { setFrom(e.target.value); setActivePreset('') }} />
-            <span className="text-sm text-gray-500">Đến:</span>
-            <input type="date" className="input text-sm py-1.5" value={to} onChange={e => { setTo(e.target.value); setActivePreset('') }} />
+      {applyDateFilter ? (
+        <div className="card py-3">
+          <div className="flex items-center flex-wrap gap-3">
+            <div className="flex gap-1.5 flex-wrap">
+              {PRESETS.map(p => (
+                <button key={p.label} onClick={() => applyPreset(p)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activePreset === p.label ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 ml-auto flex-wrap">
+              <span className="text-sm text-gray-500">Từ:</span>
+              <input type="date" className="input text-sm py-1.5" value={from} onChange={e => { setFrom(e.target.value); setActivePreset('') }} />
+              <span className="text-sm text-gray-500">Đến:</span>
+              <input type="date" className="input text-sm py-1.5" value={to} onChange={e => { setTo(e.target.value); setActivePreset('') }} />
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="card py-2.5 px-4 bg-blue-50 border border-blue-100">
+          <p className="text-sm text-blue-700">Hiển thị toàn bộ công nợ chưa thanh toán — bộ lọc ngày chỉ áp dụng khi xem công nợ <strong>Đã thu/Đã trả</strong>.</p>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <div className="card p-4 flex items-center gap-3 cursor-pointer hover:bg-red-50/30 transition-colors" onClick={() => switchType('SUPPLIER')}>

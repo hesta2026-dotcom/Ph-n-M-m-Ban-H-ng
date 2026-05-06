@@ -58,6 +58,7 @@ router.post('/', auth, async (req, res) => {
               note: `Đơn hàng ${orderCode}`
             }
           });
+          await tx.customer.update({ where: { id: customerId }, data: { debt: { increment: total } } });
         }
       }
 
@@ -129,6 +130,7 @@ router.patch('/:id/status', auth, async (req, res) => {
                 note: `Đơn hàng ${order.orderCode}`
               }
             });
+            await tx.customer.update({ where: { id: order.customerId }, data: { debt: { increment: order.total } } });
           }
         }
       }

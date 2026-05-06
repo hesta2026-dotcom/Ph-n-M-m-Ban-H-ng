@@ -2,15 +2,30 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: process.env.CLIENT_URL, methods: ['GET', 'POST'] }
-});
 
-app.use(cors({ origin: '*' }));
+// Cho phép nhiều origin: localhost dev + Vercel production
+const allowedOrigins = (process.env.CLIENT_URL || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
+const corsOptions = {
+  origin: (origin, cb) => {
+    if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) return cb(null, true);
+    cb(new Error('CORS: origin không được phép'));
+  },
+  credentials: true,
+};
+
+const io = new Server(server, { cors: { origin: allowedOrigins.length ? allowedOrigins : '*', methods: ['GET', 'POST'] } });
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use('/uploads', express.static(require('path').join(__dirname, '../uploads')));
 
@@ -40,5 +55,22 @@ io.on('connection', (socket) => {
 });
 
 app.set('io', io);
+
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, "0.0.0.0", () => console.log(`Server running on port ${PORT}`));
+
+async function startServer() {
+  // Tự động import data nếu có backup/data.json
+  const backupFile = path.join(__dirname, '../../backup/data.json');
+  if (fs.existsSync(backupFile)) {
+    try {
+      console.log('Phát hiện backup/data.json — đang import...');
+      await require('./scripts/import-silent')();
+    } catch (e) {
+      console.error('Import data thất bại:', e.message);
+    }
+  }
+
+  server.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
+}
+
+startServer();

@@ -1,0 +1,32 @@
+{
+  "exportedAt": "2026-05-06T08:56:54.586Z",
+  "users": [
+    {
+      "id": "f5d7e646-0456-4b88-83ed-02e38c9596a2",
+      "name": "Admin",
+      "email": "admin@pos.com",
+      "password": "$2a$10$sk.OpYVxDVX4p44GqLqaau3FdqKXBRJXDsdSDnkXa2sYYjqeEjtEy",
+      "phone": null,
+      "role": "ADMIN",
+      "isActive": true,
+      "createdAt": "2026-05-02T07:23:48.514Z",
+      "updatedAt": "2026-05-02T07:23:48.514Z"
+    }
+  ],
+  "categories": [],
+  "suppliers": [],
+  "customers": [],
+  "products": [],
+  "salesChannels": [],
+  "orders": [],
+  "orderItems": [],
+  "purchaseOrders": [],
+  "purchaseItems": [],
+  "stockLogs": [],
+  "expenses": [],
+  "receipts": [],
+  "debts": [],
+  "channelProducts": [],
+  "shifts": [],
+  "auditLogs": []
+}
