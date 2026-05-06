@@ -147,34 +147,65 @@ router.post('/import', auth, xlsxUpload.single('file'), async (req, res) => {
     const catMap = Object.fromEntries(categories.map(c => [c.name.trim().toLowerCase(), c.id]));
     const supMap = Object.fromEntries(suppliers.map(s => [s.name.trim().toLowerCase(), s.id]));
 
-    // Parse tất cả dòng trước
+    // Parse tất cả dòng
     const dataRows = [];
-    let skipped = 0, errors = [];
+    let skipped = 0;
+    const errors = [];
     for (let i = 1; i < rows.length; i++) {
       const r = rows[i];
       if (!r || !r[0] || !r[1]) { skipped++; continue; }
       const [name, code, barcode, unit, packageUnit, packageQty,
              price, costPrice, stockThung, stockLe, minStock,
              brand, manufacturer, catName, supName, description] = r;
-      if (!name || !code || !price) { skipped++; continue; }
-      dataRows.push({ rowNum: i + 1, name, code: String(code), barcode, unit, packageUnit, packageQty,
-        price, costPrice, stockThung, stockLe, minStock, brand, manufacturer, catName, supName, description });
+      if (!name || !code || !price) { skipped++; errors.push(`Dòng ${i + 1}: Thiếu tên/mã/giá`); continue; }
+      dataRows.push({ rowNum: i + 1, name, code: String(code).trim(), barcode: barcode ? String(barcode).trim() : null,
+        unit, packageUnit, packageQty, price, costPrice, stockThung, stockLe, minStock,
+        brand, manufacturer, catName, supName, description });
     }
 
-    // Lấy tất cả mã đã tồn tại trong 1 query duy nhất
-    const allCodes = dataRows.map(r => r.code);
-    const existingProducts = await prisma.product.findMany({
-      where: { code: { in: allCodes } },
-      select: { code: true }
-    });
-    const existingCodes = new Set(existingProducts.map(p => p.code));
-
-    // Lọc và chuẩn bị dữ liệu để createMany
-    const toCreate = [];
+    // Phát hiện trùng code/barcode trong chính file
+    const seenCodes = new Map();
+    const seenBarcodes = new Map();
+    const dedupedRows = [];
     for (const r of dataRows) {
+      if (seenCodes.has(r.code)) {
+        skipped++;
+        errors.push(`Dòng ${r.rowNum}: Mã SP "${r.code}" bị trùng trong file (đã có ở dòng ${seenCodes.get(r.code)})`);
+        continue;
+      }
+      if (r.barcode && seenBarcodes.has(r.barcode)) {
+        skipped++;
+        errors.push(`Dòng ${r.rowNum}: Barcode "${r.barcode}" bị trùng trong file (đã có ở dòng ${seenBarcodes.get(r.barcode)})`);
+        continue;
+      }
+      seenCodes.set(r.code, r.rowNum);
+      if (r.barcode) seenBarcodes.set(r.barcode, r.rowNum);
+      dedupedRows.push(r);
+    }
+
+    // Lấy tất cả code/barcode đã tồn tại trong DB (1 query mỗi loại)
+    const allCodes = dedupedRows.map(r => r.code);
+    const allBarcodes = dedupedRows.map(r => r.barcode).filter(Boolean);
+    const [existingByCode, existingByBarcode] = await Promise.all([
+      prisma.product.findMany({ where: { code: { in: allCodes } }, select: { code: true } }),
+      allBarcodes.length > 0
+        ? prisma.product.findMany({ where: { barcode: { in: allBarcodes } }, select: { barcode: true } })
+        : Promise.resolve([])
+    ]);
+    const existingCodes = new Set(existingByCode.map(p => p.code));
+    const existingBarcodes = new Set(existingByBarcode.map(p => p.barcode));
+
+    // Lọc và tạo từng sản phẩm
+    let created = 0;
+    for (const r of dedupedRows) {
       if (existingCodes.has(r.code)) {
         skipped++;
-        errors.push(`Dòng ${r.rowNum}: Mã "${r.code}" đã tồn tại`);
+        errors.push(`Dòng ${r.rowNum}: Mã SP "${r.code}" đã tồn tại trong hệ thống`);
+        continue;
+      }
+      if (r.barcode && existingBarcodes.has(r.barcode)) {
+        skipped++;
+        errors.push(`Dòng ${r.rowNum}: Barcode "${r.barcode}" đã tồn tại trong hệ thống`);
         continue;
       }
       const pQty = r.packageQty ? +r.packageQty : 0;
@@ -183,47 +214,33 @@ router.post('/import', auth, xlsxUpload.single('file'), async (req, res) => {
       const totalStock = pQty > 0 ? (sThung * pQty + sLe) : (sThung + sLe);
       const categoryId = r.catName ? (catMap[String(r.catName).trim().toLowerCase()] || null) : null;
       const supplierId = r.supName ? (supMap[String(r.supName).trim().toLowerCase()] || null) : null;
-      toCreate.push({
-        name: String(r.name), code: r.code,
-        barcode: r.barcode ? String(r.barcode) : null,
-        unit: r.unit ? String(r.unit) : 'cái',
-        packageUnit: r.packageUnit ? String(r.packageUnit) : null,
-        packageQty: pQty > 0 ? pQty : null,
-        price: +r.price || 0, costPrice: +(r.costPrice || 0),
-        stock: totalStock, minStock: +(r.minStock || 5),
-        brand: r.brand ? String(r.brand) : null,
-        manufacturer: r.manufacturer ? String(r.manufacturer) : null,
-        categoryId, supplierId,
-        description: r.description ? String(r.description) : null
-      });
-    }
-
-    // Tạo tất cả trong 1 transaction
-    let created = 0;
-    if (toCreate.length > 0) {
-      // createMany không hỗ trợ skipDuplicates với SQLite nên chia batch để tránh lỗi barcode trùng
-      const BATCH = 50;
-      for (let i = 0; i < toCreate.length; i += BATCH) {
-        const batch = toCreate.slice(i, i + BATCH);
-        try {
-          const result = await prisma.product.createMany({ data: batch, skipDuplicates: true });
-          created += result.count;
-        } catch (err) {
-          // fallback: tạo từng cái để ghi nhận lỗi cụ thể
-          for (const item of batch) {
-            try {
-              await prisma.product.create({ data: item });
-              created++;
-            } catch (e2) {
-              errors.push(`Mã "${item.code}": ${e2.message}`);
-              skipped++;
-            }
+      try {
+        await prisma.product.create({
+          data: {
+            name: String(r.name), code: r.code,
+            barcode: r.barcode || null,
+            unit: r.unit ? String(r.unit) : 'cái',
+            packageUnit: r.packageUnit ? String(r.packageUnit) : null,
+            packageQty: pQty > 0 ? pQty : null,
+            price: +r.price || 0, costPrice: +(r.costPrice || 0),
+            stock: totalStock, minStock: +(r.minStock || 5),
+            brand: r.brand ? String(r.brand) : null,
+            manufacturer: r.manufacturer ? String(r.manufacturer) : null,
+            categoryId, supplierId,
+            description: r.description ? String(r.description) : null
           }
-        }
+        });
+        created++;
+        // Cập nhật set để phát hiện trùng với sản phẩm vừa tạo
+        existingCodes.add(r.code);
+        if (r.barcode) existingBarcodes.add(r.barcode);
+      } catch (e2) {
+        skipped++;
+        errors.push(`Dòng ${r.rowNum}: Mã "${r.code}" - ${e2.message}`);
       }
     }
 
-    res.json({ created, skipped, errors: errors.slice(0, 20) });
+    res.json({ created, skipped, total: dataRows.length, errors });
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
