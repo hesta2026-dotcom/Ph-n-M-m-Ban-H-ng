@@ -12,6 +12,26 @@ const parseMoney = (s: string) => +s.replace(/[^0-9]/g, '') || 0
 const MARGIN = 1.065
 const suggestPrice = (cost: number) => cost > 0 ? Math.round(cost * MARGIN / 500) * 500 : 0
 
+const removeDiacritics = (s: string) =>
+  s.normalize('NFD').replace(/[̀-ͯ]/g, '')
+   .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+
+function generateCode(name: string): string {
+  const clean = removeDiacritics(name.trim())
+  const words = clean.split(/\s+/).filter(Boolean)
+  const measurements: string[] = []
+  const textWords: string[] = []
+  for (const w of words) {
+    if (/^\d+([.,]\d+)?(kg|g|ml|l|m|x)?$/i.test(w) || /^\d+$/.test(w)) {
+      measurements.push(w.toUpperCase().replace(',', '.'))
+    } else {
+      textWords.push(w)
+    }
+  }
+  const initials = textWords.map(w => w[0].toUpperCase()).join('')
+  return initials + measurements.join('')
+}
+
 const emptyForm = {
   name: '', code: '', barcode: '', price: 0, costPrice: 0,
   stock: 0, minStock: 5, unit: 'cái',
