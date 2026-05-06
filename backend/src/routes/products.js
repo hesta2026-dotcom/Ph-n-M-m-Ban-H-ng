@@ -227,7 +227,8 @@ router.post('/import', auth, xlsxUpload.single('file'), async (req, res) => {
             brand: r.brand ? String(r.brand) : null,
             manufacturer: r.manufacturer ? String(r.manufacturer) : null,
             categoryId, supplierId,
-            description: r.description ? String(r.description) : null
+            description: r.description ? String(r.description) : null,
+            isActive: true
           }
         });
         created++;
