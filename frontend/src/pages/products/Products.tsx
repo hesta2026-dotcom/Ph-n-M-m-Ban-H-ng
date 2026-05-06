@@ -296,17 +296,27 @@ export default function Products() {
       {/* Kết quả import */}
       {importResult && (
         <div className={`p-4 rounded-xl border text-sm ${importResult.created > 0 ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="font-semibold text-green-700">Đã thêm: {importResult.created} sản phẩm</span>
-              {importResult.skipped > 0 && <span className="ml-3 text-gray-500">Bỏ qua: {importResult.skipped}</span>}
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-3 flex-wrap">
+              {importResult.total != null && (
+                <span className="text-gray-500">Tổng file: <strong>{importResult.total}</strong></span>
+              )}
+              <span className="font-semibold text-green-700">✓ Đã thêm: {importResult.created}</span>
+              {importResult.skipped > 0 && (
+                <span className="text-red-600 font-medium">✗ Bỏ qua: {importResult.skipped}</span>
+              )}
             </div>
-            <button onClick={() => setImportResult(null)} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
+            <button onClick={() => setImportResult(null)} className="text-gray-400 hover:text-gray-600 ml-2"><X size={16} /></button>
           </div>
           {importResult.errors?.length > 0 && (
-            <ul className="mt-2 space-y-0.5 text-xs text-red-600">
-              {importResult.errors.map((err: string, i: number) => <li key={i}>• {err}</li>)}
-            </ul>
+            <details className="mt-2">
+              <summary className="text-xs text-red-600 cursor-pointer font-medium">
+                Xem lý do bỏ qua ({importResult.errors.length} dòng)
+              </summary>
+              <ul className="mt-1.5 space-y-0.5 text-xs text-red-600 max-h-48 overflow-y-auto">
+                {importResult.errors.map((err: string, i: number) => <li key={i}>• {err}</li>)}
+              </ul>
+            </details>
           )}
         </div>
       )}
