@@ -4,7 +4,6 @@ const https = require('https');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const FormData = require('form-data');
 
 const RAILWAY_URL = 'https://ph-n-m-m-ban-h-ng-production-5958.up.railway.app';
 
