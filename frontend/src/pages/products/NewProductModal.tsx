@@ -54,6 +54,7 @@ export default function NewProductModal({ onClose, onCreated, defaultSupplierId 
   const [uploading, setUploading] = useState(false)
   const [showNewCategory, setShowNewCategory] = useState(false)
   const [priceAutoSet, setPriceAutoSet] = useState(false)
+  const [codeAutoSet, setCodeAutoSet] = useState(true)
 
   const set = (key: string, val: any) => setForm(f => ({ ...f, [key]: val }))
 
