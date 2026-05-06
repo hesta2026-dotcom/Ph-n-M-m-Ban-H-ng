@@ -1,8 +1,6 @@
 [build]
-builder = "nixpacks"
-buildCommand = "cd backend && npm install && npx prisma generate"
+builder = "dockerfile"
 
 [deploy]
-startCommand = "node backend/start.js"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
