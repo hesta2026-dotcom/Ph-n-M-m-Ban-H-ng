@@ -7,8 +7,8 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     proxy: {
-      '/api': 'https://ph-n-m-m-ban-h-ng-production-5958.up.railway.app',
-      '/uploads': 'https://ph-n-m-m-ban-h-ng-production-5958.up.railway.app',
+      '/api': 'http://192.168.1.2:5000',
+      '/uploads': 'http://192.168.1.2:5000',
     }
   }
 })
