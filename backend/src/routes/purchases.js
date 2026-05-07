@@ -31,12 +31,26 @@ router.post('/', auth, async (req, res) => {
         await tx.product.update({ where: { id: item.productId }, data: { stock: { increment: item.qty }, costPrice: item.costPrice } });
         await tx.stockLog.create({ data: { productId: item.productId, type: 'IMPORT', qty: item.qty, before: product.stock, after: product.stock + item.qty, note: `Nhập kho - ${code}` } });
       }
+      // Luon tao cong no cho phieu nhap
+      const debtStatus = (paid || 0) >= total ? 'PAID' : (paid || 0) > 0 ? 'PARTIAL' : 'UNPAID';
+      await tx.debt.create({
+        data: {
+          type: 'SUPPLIER', supplierId,
+          amount: total, paid: paid || 0, remaining: Math.max(0, debt),
+          status: debtStatus, note: `Phiếu nhập ${code}`
+        }
+      });
+      // Cap nhat du no nha cung cap
       if (debt > 0) {
         await tx.supplier.update({ where: { id: supplierId }, data: { debt: { increment: debt } } });
-        await tx.debt.create({
+      }
+      // Tao phieu chi neu co thanh toan
+      if ((paid || 0) > 0) {
+        await tx.expense.create({
           data: {
-            type: 'SUPPLIER', supplierId, amount: debt, paid: 0, remaining: debt,
-            status: 'UNPAID', note: `Phiếu nhập ${code}`
+            type: 'EXPENSE', category: 'Thanh toán nhà cung cấp',
+            amount: paid, description: `Thanh toán phiếu nhập ${code}`,
+            userId: req.user.id
           }
         });
       }
