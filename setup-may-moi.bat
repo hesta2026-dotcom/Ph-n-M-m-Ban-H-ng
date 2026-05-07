@@ -1,73 +1,72 @@
 @echo off
-chcp 65001 > nul
+title Cai dat POS System - May Moi
+color 0B
 echo ============================================
-echo   CÀI ĐẶT HỆ THỐNG POS - MÁY MỚI
+echo     CAI DAT POS SYSTEM - LAN DAU TIEN
 echo ============================================
 echo.
 
-:: Kiểm tra Node.js
-node -v > nul 2>&1
-if %ERRORLEVEL% NEQ 0 (
-  echo [LỖI] Chưa cài Node.js!
-  echo Tải tại: https://nodejs.org  ^(chọn LTS^)
-  echo Sau khi cài xong, chạy lại file này.
-  pause
-  exit /b 1
+:: Kiem tra Node.js
+echo [1/5] Kiem tra Node.js...
+node --version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [LOI] Chua cai Node.js!
+    echo Vao https://nodejs.org va tai ban LTS
+    pause
+    exit
 )
-echo [OK] Node.js:
-node -v
+echo [OK] Node.js da co
+node --version
 
-:: Kiểm tra Git
-git -v > nul 2>&1
-if %ERRORLEVEL% NEQ 0 (
-  echo [LỖI] Chưa cài Git!
-  echo Tải tại: https://git-scm.com
-  pause
-  exit /b 1
+:: Tao thu muc database
+echo.
+echo [2/5] Tao thu muc database...
+mkdir "D:\HESTA PHAN MEM\database" 2>nul
+echo [OK] Thu muc: D:\HESTA PHAN MEM\database\
+
+:: Cai backend dependencies
+echo.
+echo [3/5] Cai Backend dependencies...
+cd /d "d:\HESTA PHAN MEM\Ph-n-M-m-Ban-H-ng\backend"
+call npm install
+if %errorlevel% neq 0 (
+    echo [LOI] npm install backend that bai!
+    pause
+    exit
 )
-echo [OK] Git:
-git -v
+echo [OK] Backend dependencies da cai xong
 
+:: Tao database
 echo.
-echo Cài đặt thư viện backend...
-cd /d "%~dp0backend"
-npm install
-if %ERRORLEVEL% NEQ 0 (
-  echo [LỖI] npm install thất bại!
-  pause
-  exit /b 1
+echo [4/5] Tao database...
+call npx prisma generate
+call npx prisma db push
+if %errorlevel% neq 0 (
+    echo [LOI] Tao database that bai!
+    pause
+    exit
 )
+echo [OK] Database da san sang
 
+:: Cai frontend dependencies
 echo.
-echo [OK] Cài đặt hoàn tất!
-echo.
-echo Tạo file khởi động...
+echo [5/5] Cai Frontend dependencies...
+cd /d "d:\HESTA PHAN MEM\Ph-n-M-m-Ban-H-ng\frontend"
+call npm install
+if %errorlevel% neq 0 (
+    echo [LOI] npm install frontend that bai!
+    pause
+    exit
+)
+echo [OK] Frontend dependencies da cai xong
 
-:: Tạo file khởi động server
-(
-echo @echo off
-echo chcp 65001 ^> nul
-echo title POS Server - Dang chay...
-echo echo ============================================
-echo echo   POS SERVER DANG CHAY
-echo echo   Khong tat cua so nay!
-echo echo ============================================
-echo echo.
-echo cd /d "%%~dp0backend"
-echo node start.js
-echo pause
-) > "%~dp0Khoi-dong-Server.bat"
-
-echo [OK] Đã tạo "Khoi-dong-Server.bat"
 echo.
 echo ============================================
-echo   HOÀN TẤT! Làm theo bước sau:
+echo   CAI DAT HOAN TAT!
+echo.
+echo   Tiep theo:
+echo   - Chay "start.bat" de mo toan bo he thong
+echo   - Hoac "Khoi-dong-Server.bat" de chi chay backend
 echo ============================================
-echo.
-echo 1. Mở file "Khoi-dong-Server.bat" để chạy server
-echo 2. Đợi hiện "Starting server..." là xong
-echo 3. Truy cập: http://localhost:5000
-echo.
-echo Đăng nhập: admin@pos.com / 123456
 echo.
 pause
