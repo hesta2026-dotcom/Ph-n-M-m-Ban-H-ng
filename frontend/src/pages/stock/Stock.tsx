@@ -114,6 +114,8 @@ export default function Stock() {
   const [adjustForm, setAdjustForm] = useState({ productId: '', newStock: 0, note: '' })
   const [showPurchase, setShowPurchase] = useState(false)
   const [newProductForItemIdx, setNewProductForItemIdx] = useState<number | null>(null)
+  const [itemSearch, setItemSearch] = useState<string[]>([''])
+  const [itemDropdown, setItemDropdown] = useState<number | null>(null)
   const [showNewSupplier, setShowNewSupplier] = useState(false)
   const [searchLow, setSearchLow] = useState('')
   const [searchAll, setSearchAll] = useState('')
@@ -191,10 +193,14 @@ export default function Stock() {
     supplierId: '', paid: 0, note: '',
     items: [{ productId: '', qty: 1, costPrice: 0 }]
   })
-  const addPurchaseItem = () =>
+  const addPurchaseItem = () => {
     setPurchaseForm(p => ({ ...p, items: [...p.items, { productId: '', qty: 1, costPrice: 0 }] }))
-  const removePurchaseItem = (i: number) =>
+    setItemSearch(s => [...s, ''])
+  }
+  const removePurchaseItem = (i: number) => {
     setPurchaseForm(p => ({ ...p, items: p.items.filter((_, idx) => idx !== i) }))
+    setItemSearch(s => s.filter((_, idx) => idx !== i))
+  }
   const updatePurchaseItem = (i: number, key: string, val: any) =>
     setPurchaseForm(p => ({ ...p, items: p.items.map((item, idx) => idx === i ? { ...item, [key]: val } : item) }))
 
@@ -218,6 +224,7 @@ export default function Stock() {
       qc.invalidateQueries({ queryKey: ['products-all'] })
       setShowPurchase(false)
       setPurchaseForm({ supplierId: '', paid: 0, note: '', items: [{ productId: '', qty: 1, costPrice: 0 }] })
+      setItemSearch([''])
     },
     onError: (e: any) => toast.error(e.response?.data?.message || 'Lỗi')
   })
@@ -1167,17 +1174,49 @@ export default function Stock() {
                     return (
                       <div key={i} className="border rounded-xl p-3 space-y-2">
                         <div className="flex items-start gap-2">
-                          <div className="flex-1">
-                            <select className="input text-sm"
-                              value={item.productId}
+                          <div className="flex-1 relative">
+                            <input
+                              className="input text-sm w-full"
+                              placeholder="Tìm theo tên, mã sản phẩm..."
+                              value={itemSearch[i] ?? ''}
+                              onFocus={() => setItemDropdown(i)}
                               onChange={e => {
-                                const p = products?.find((x: any) => x.id === e.target.value)
-                                updatePurchaseItem(i, 'productId', e.target.value)
-                                if (p) updatePurchaseItem(i, 'costPrice', p.costPrice)
-                              }} required>
-                              <option value="">-- Chọn sản phẩm --</option>
-                              {products?.map((p: any) => <option key={p.id} value={p.id}>{p.name} [{p.code}]</option>)}
-                            </select>
+                                const v = e.target.value
+                                setItemSearch(s => { const n = [...s]; n[i] = v; return n })
+                                if (!v) { updatePurchaseItem(i, 'productId', ''); updatePurchaseItem(i, 'costPrice', 0) }
+                                setItemDropdown(i)
+                              }}
+                              onBlur={() => setTimeout(() => setItemDropdown(null), 150)}
+                            />
+                            {itemDropdown === i && (
+                              <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border rounded-xl shadow-lg max-h-52 overflow-y-auto">
+                                {(products || [])
+                                  .filter((p: any) => {
+                                    const q = (itemSearch[i] ?? '').toLowerCase()
+                                    return !q || p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q)
+                                  })
+                                  .slice(0, 50)
+                                  .map((p: any) => (
+                                    <button key={p.id} type="button"
+                                      className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm flex justify-between items-center gap-2"
+                                      onMouseDown={() => {
+                                        updatePurchaseItem(i, 'productId', p.id)
+                                        updatePurchaseItem(i, 'costPrice', p.costPrice)
+                                        setItemSearch(s => { const n = [...s]; n[i] = p.name; return n })
+                                        setItemDropdown(null)
+                                      }}>
+                                      <span className="truncate">{p.name}</span>
+                                      <span className="text-xs text-gray-400 flex-shrink-0">[{p.code}]</span>
+                                    </button>
+                                  ))}
+                                {(products || []).filter((p: any) => {
+                                  const q = (itemSearch[i] ?? '').toLowerCase()
+                                  return !q || p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q)
+                                }).length === 0 && (
+                                  <p className="text-center text-gray-400 text-sm py-3">Không tìm thấy</p>
+                                )}
+                              </div>
+                            )}
                           </div>
                           <button type="button" title="Tạo sản phẩm mới"
                             onClick={() => setNewProductForItemIdx(i)}
