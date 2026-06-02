@@ -114,17 +114,23 @@ export default function ExportSlip({ order, onClose, onPrint }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {order.items?.map((item: any, idx: number) => (
-                  <tr key={item.id} className={idx % 2 === 1 ? 'bg-gray-50' : ''}>
-                    <td className="border border-gray-200 px-2 py-1.5 text-center">{idx + 1}</td>
-                    <td className="border border-gray-200 px-2 py-1.5 font-mono text-xs">{item.product?.code}</td>
-                    <td className="border border-gray-200 px-2 py-1.5">{item.product?.name}</td>
-                    <td className="border border-gray-200 px-2 py-1.5 text-center">{item.unit || item.product?.unit || 'cái'}</td>
-                    <td className="border border-gray-200 px-2 py-1.5 text-right font-medium">{item.qty}</td>
-                    <td className="border border-gray-200 px-2 py-1.5 text-right">{fmt(item.price)}</td>
-                    <td className="border border-gray-200 px-2 py-1.5 text-right font-semibold">{fmt(item.total)}</td>
-                  </tr>
-                ))}
+                {order.items?.map((item: any, idx: number) => {
+                  const pkgQty = item.product?.packageQty
+                  const isBox = item.unit && item.unit === item.product?.packageUnit && pkgQty > 1
+                  const displayQty = isBox ? item.qty / pkgQty : item.qty
+                  const displayPrice = isBox ? Math.round(item.price * pkgQty) : Math.round(item.price)
+                  return (
+                    <tr key={item.id} className={idx % 2 === 1 ? 'bg-gray-50' : ''}>
+                      <td className="border border-gray-200 px-2 py-1.5 text-center">{idx + 1}</td>
+                      <td className="border border-gray-200 px-2 py-1.5 font-mono text-xs">{item.product?.code}</td>
+                      <td className="border border-gray-200 px-2 py-1.5">{item.product?.name}</td>
+                      <td className="border border-gray-200 px-2 py-1.5 text-center">{item.unit || item.product?.unit || 'cái'}</td>
+                      <td className="border border-gray-200 px-2 py-1.5 text-right font-medium">{displayQty}</td>
+                      <td className="border border-gray-200 px-2 py-1.5 text-right">{fmt(displayPrice)}</td>
+                      <td className="border border-gray-200 px-2 py-1.5 text-right font-semibold">{fmt(item.total)}</td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
 

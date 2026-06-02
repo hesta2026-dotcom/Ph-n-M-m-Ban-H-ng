@@ -5,22 +5,24 @@ const prisma = new PrismaClient();
 
 router.get('/dashboard', auth, async (req, res) => {
   try {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+    const { from, to } = req.query;
+    const dateFrom = from ? new Date(from + 'T00:00:00+07:00') : (() => { const d = new Date(); d.setHours(0,0,0,0); return d; })();
+    const dateTo   = to   ? new Date(to   + 'T23:59:59+07:00') : (() => { const d = new Date(); d.setHours(23,59,59,999); return d; })();
+    const dateFilter = { createdAt: { gte: dateFrom, lte: dateTo } };
 
-    const [todayOrders, todayRevenue, totalProducts, totalCustomers, recentOrders, lowStockRaw] = await Promise.all([
-      prisma.order.count({ where: { createdAt: { gte: today, lt: tomorrow }, status: 'COMPLETED' } }),
-      prisma.order.aggregate({ where: { createdAt: { gte: today, lt: tomorrow }, status: 'COMPLETED' }, _sum: { total: true } }),
+    const [periodOrders, periodRevenue, totalProducts, totalCustomers, recentOrders, lowStockRaw] = await Promise.all([
+      prisma.order.count({ where: { ...dateFilter, status: 'COMPLETED' } }),
+      prisma.order.aggregate({ where: { ...dateFilter, status: 'COMPLETED' }, _sum: { total: true } }),
       prisma.product.count({ where: { isActive: true } }),
       prisma.customer.count(),
-      prisma.order.findMany({ where: { status: 'COMPLETED' }, include: { customer: true }, orderBy: { createdAt: 'desc' }, take: 5 }),
+      prisma.order.findMany({ where: { ...dateFilter, status: 'COMPLETED' }, include: { customer: true }, orderBy: { createdAt: 'desc' }, take: 5 }),
       prisma.$queryRaw`SELECT COUNT(*) as cnt FROM Product WHERE isActive = 1 AND stock <= minStock`
     ]);
     const lowStock = Number(lowStockRaw[0]?.cnt ?? 0);
 
     res.json({
-      todayOrders,
-      todayRevenue: todayRevenue._sum.total || 0,
+      periodOrders,
+      periodRevenue: periodRevenue._sum.total || 0,
       totalProducts,
       lowStock,
       totalCustomers,

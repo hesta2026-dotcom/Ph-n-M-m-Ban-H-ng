@@ -36,7 +36,7 @@ router.post('/', auth, async (req, res) => {
           note, channel: channel || 'store', status,
           items: { create: items.map(i => ({ productId: i.productId, qty: i.qty, price: i.price, discount: i.discount || 0, total: i.price * i.qty - (i.discount || 0), unit: i.unit || 'cái' })) }
         },
-        include: { items: true, customer: true }
+        include: { items: { include: { product: true } }, customer: true, user: { select: { id: true, name: true } } }
       });
 
       if (status === 'COMPLETED') {
@@ -75,6 +75,51 @@ router.get('/:id', auth, async (req, res) => {
     const order = await prisma.order.findUnique({ where: { id: req.params.id }, include: { customer: true, user: { select: { id: true, name: true } }, items: { include: { product: true } } } });
     if (!order) return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
     res.json(order);
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+router.put('/:id', auth, async (req, res) => {
+  try {
+    const { items, discount, note, paymentMethod, amountPaid } = req.body;
+    const order = await prisma.order.findUnique({ where: { id: req.params.id } });
+    if (!order) return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
+
+    const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);
+    const newDiscount = discount ?? order.discount;
+    const total = subtotal - newDiscount;
+    const finalPaid = amountPaid ?? order.amountPaid;
+    const change = Math.max(0, finalPaid - total);
+
+    const updated = await prisma.$transaction(async (tx) => {
+      await tx.orderItem.deleteMany({ where: { orderId: order.id } });
+      const result = await tx.order.update({
+        where: { id: order.id },
+        data: {
+          subtotal, total, discount: newDiscount,
+          paymentMethod: paymentMethod ?? order.paymentMethod,
+          amountPaid: finalPaid, change, note: note ?? order.note,
+          items: { create: items.map(i => ({ productId: i.productId, qty: i.qty, price: i.price, discount: 0, total: i.price * i.qty, unit: i.unit || 'cái' })) }
+        },
+        include: { items: { include: { product: true } }, customer: true, user: { select: { id: true, name: true } } }
+      });
+
+      // Đồng bộ công nợ nếu đã có
+      const existingDebt = await tx.debt.findUnique({ where: { orderId: order.id } });
+      if (existingDebt) {
+        const newRemaining = Math.max(0, total - finalPaid);
+        const debtDiff = newRemaining - existingDebt.remaining;
+        await tx.debt.update({
+          where: { id: existingDebt.id },
+          data: { amount: total, paid: finalPaid, remaining: newRemaining, status: newRemaining <= 0 ? 'PAID' : 'UNPAID' }
+        });
+        if (order.customerId && Math.abs(debtDiff) > 0) {
+          await tx.customer.update({ where: { id: order.customerId }, data: { debt: { increment: debtDiff } } });
+        }
+      }
+
+      return result;
+    });
+    res.json(updated);
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
 

@@ -10,6 +10,8 @@ import SuggestTab from './SuggestTab'
 import ColumnPicker, { ColDef } from '../../components/ColumnPicker'
 
 const fmt = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
+const fmtMoney = (n: number) => n === 0 ? '' : n.toLocaleString('vi-VN')
+const parseMoney = (s: string) => +s.replace(/[^0-9]/g, '') || 0
 const PAY_LABEL: any = { CASH: 'Tiền mặt', CARD: 'Thẻ ngân hàng', TRANSFER: 'Chuyển khoản', DEBT: 'Ghi nợ', MIXED: 'Hỗn hợp' }
 
 const COLS_LOW: ColDef[] = [
@@ -113,9 +115,11 @@ export default function Stock() {
   const [showAdjust, setShowAdjust] = useState(false)
   const [adjustForm, setAdjustForm] = useState({ productId: '', newStock: 0, note: '' })
   const [showPurchase, setShowPurchase] = useState(false)
+  const [editingPurchaseId, setEditingPurchaseId] = useState<string | null>(null)
   const [newProductForItemIdx, setNewProductForItemIdx] = useState<number | null>(null)
   const [itemSearch, setItemSearch] = useState<string[]>([''])
   const [itemDropdown, setItemDropdown] = useState<number | null>(null)
+  const [itemUnit, setItemUnit] = useState<string[]>(['le'])
   const [showNewSupplier, setShowNewSupplier] = useState(false)
   const [searchLow, setSearchLow] = useState('')
   const [searchAll, setSearchAll] = useState('')
@@ -196,10 +200,12 @@ export default function Stock() {
   const addPurchaseItem = () => {
     setPurchaseForm(p => ({ ...p, items: [...p.items, { productId: '', qty: 1, costPrice: 0 }] }))
     setItemSearch(s => [...s, ''])
+    setItemUnit(s => [...s, 'le'])
   }
   const removePurchaseItem = (i: number) => {
     setPurchaseForm(p => ({ ...p, items: p.items.filter((_, idx) => idx !== i) }))
     setItemSearch(s => s.filter((_, idx) => idx !== i))
+    setItemUnit(s => s.filter((_, idx) => idx !== i))
   }
   const updatePurchaseItem = (i: number, key: string, val: any) =>
     setPurchaseForm(p => ({ ...p, items: p.items.map((item, idx) => idx === i ? { ...item, [key]: val } : item) }))
@@ -215,19 +221,41 @@ export default function Stock() {
   })
 
   const purchase = useMutation({
-    mutationFn: (d: any) => api.post('/purchases', d),
+    mutationFn: (d: any) => editingPurchaseId
+      ? api.put(`/purchases/${editingPurchaseId}`, d)
+      : api.post('/purchases', d),
     onSuccess: () => {
-      toast.success('Nhập kho thành công')
+      toast.success(editingPurchaseId ? 'Cập nhật phiếu nhập thành công' : 'Nhập kho thành công')
       qc.invalidateQueries({ queryKey: ['purchases'] })
       qc.invalidateQueries({ queryKey: ['low-stock'] })
       qc.invalidateQueries({ queryKey: ['stock-all'] })
       qc.invalidateQueries({ queryKey: ['products-all'] })
       setShowPurchase(false)
+      setEditingPurchaseId(null)
       setPurchaseForm({ supplierId: '', paid: 0, note: '', items: [{ productId: '', qty: 1, costPrice: 0 }] })
       setItemSearch([''])
+      setItemUnit(['le'])
     },
     onError: (e: any) => toast.error(e.response?.data?.message || 'Lỗi')
   })
+
+  const openEditPurchase = (p: any) => {
+    setEditingPurchaseId(p.id)
+    setPurchaseForm({
+      supplierId: p.supplierId || '',
+      paid: p.paid || 0,
+      note: p.note || '',
+      items: (p.items || []).map((it: any) => ({
+        productId: it.productId,
+        qty: it.qty,
+        costPrice: it.costPrice,
+      }))
+    })
+    setItemSearch((p.items || []).map((it: any) => it.product?.name || ''))
+    setItemUnit((p.items || []).map(() => 'le'))
+    setViewPurchase(null)
+    setShowPurchase(true)
+  }
 
   const logTypeLabel: any = { IMPORT: 'Nhập kho', EXPORT: 'Xuất kho', ADJUST: 'Điều chỉnh', RETURN: 'Hoàn hàng' }
   const logTypeClass: any = { IMPORT: 'badge-green', EXPORT: 'badge-red', ADJUST: 'badge-yellow', RETURN: 'badge-blue' }
@@ -1139,167 +1167,247 @@ export default function Stock() {
 
       {/* ==================== Modal Nhập hàng ==================== */}
       {showPurchase && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-            <div className="px-6 py-4 border-b flex justify-between items-center flex-shrink-0">
-              <h2 className="text-lg font-bold">Phiếu nhập hàng</h2>
-              <button onClick={() => setShowPurchase(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-blue-600 to-blue-500 rounded-t-2xl flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                  <PackagePlus size={18} className="text-white" />
+                </div>
+                <h2 className="text-base font-bold text-white">{editingPurchaseId ? 'Chỉnh sửa phiếu nhập' : 'Phiếu nhập hàng'}</h2>
+              </div>
+              <button onClick={() => { setShowPurchase(false); setEditingPurchaseId(null) }} className="text-white/70 hover:text-white hover:bg-white/20 p-1.5 rounded-lg transition-colors">
+                <X size={18} />
+              </button>
             </div>
-            <form onSubmit={e => { e.preventDefault(); purchase.mutate(purchaseForm) }} className="overflow-y-auto p-6 space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-sm font-medium">Nhà cung cấp *</label>
+
+            <form onSubmit={e => {
+              e.preventDefault()
+              const actualItems = purchaseForm.items.map((item, i) => {
+                const prod = products?.find((p: any) => p.id === item.productId)
+                if (itemUnit[i] === 'thung' && prod?.packageQty > 1) {
+                  return { ...item, qty: item.qty * prod.packageQty, costPrice: item.costPrice / prod.packageQty }
+                }
+                return item
+              })
+              purchase.mutate({ ...purchaseForm, items: actualItems })
+            }} className="flex flex-col flex-1 overflow-hidden">
+
+              <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+
+                {/* Nhà cung cấp */}
+                <div className="flex items-end gap-3">
+                  <div className="flex-1">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">Nhà cung cấp *</label>
+                    <select className="input" value={purchaseForm.supplierId}
+                      onChange={e => setPurchaseForm(p => ({ ...p, supplierId: e.target.value }))} required>
+                      <option value="">-- Chọn nhà cung cấp --</option>
+                      {suppliers?.map((s: any) => <option key={s.id} value={s.id}>{s.name}{s.phone ? ` — ${s.phone}` : ''}</option>)}
+                    </select>
+                  </div>
                   <button type="button" onClick={() => setShowNewSupplier(true)}
-                    className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors">
+                    className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors whitespace-nowrap mb-0.5">
                     <Plus size={13} /> Tạo mới
                   </button>
                 </div>
-                <select className="input" value={purchaseForm.supplierId}
-                  onChange={e => setPurchaseForm(p => ({ ...p, supplierId: e.target.value }))} required>
-                  <option value="">-- Chọn nhà cung cấp --</option>
-                  {suppliers?.map((s: any) => <option key={s.id} value={s.id}>{s.name}{s.phone ? ` — ${s.phone}` : ''}</option>)}
-                </select>
-              </div>
 
-              {/* Danh sách sản phẩm nhập */}
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <label className="text-sm font-medium">Sản phẩm nhập kho</label>
-                  <button type="button" onClick={addPurchaseItem}
-                    className="text-blue-600 text-sm hover:text-blue-700 font-medium">+ Thêm dòng</button>
-                </div>
-                <div className="space-y-3">
-                  {purchaseForm.items.map((item, i) => {
-                    const selectedProd = products?.find((p: any) => p.id === item.productId)
-                    return (
-                      <div key={i} className="border rounded-xl p-3 space-y-2">
-                        <div className="flex items-start gap-2">
-                          <div className="flex-1 relative">
-                            <input
-                              className="input text-sm w-full"
-                              placeholder="Tìm theo tên, mã sản phẩm..."
-                              value={itemSearch[i] ?? ''}
-                              onFocus={() => setItemDropdown(i)}
-                              onChange={e => {
-                                const v = e.target.value
-                                setItemSearch(s => { const n = [...s]; n[i] = v; return n })
-                                if (!v) { updatePurchaseItem(i, 'productId', ''); updatePurchaseItem(i, 'costPrice', 0) }
-                                setItemDropdown(i)
-                              }}
-                              onBlur={() => setTimeout(() => setItemDropdown(null), 150)}
-                            />
-                            {itemDropdown === i && (
-                              <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border rounded-xl shadow-lg max-h-52 overflow-y-auto">
-                                {(products || [])
-                                  .filter((p: any) => {
+                {/* Bảng sản phẩm */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Sản phẩm nhập kho</label>
+                    <button type="button" onClick={addPurchaseItem}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg transition-colors">
+                      <Plus size={13} /> Thêm dòng
+                    </button>
+                  </div>
+
+                  {/* Header bảng */}
+                  <div className="grid text-xs font-semibold text-gray-400 uppercase tracking-wide px-3 pb-1.5 border-b border-gray-100" style={{gridTemplateColumns:'1fr 80px 130px 100px 44px'}}>
+                    <span>Sản phẩm</span>
+                    <span className="text-center">Số lượng</span>
+                    <span className="text-right">Đơn giá (đ)</span>
+                    <span className="text-right">Thành tiền</span>
+                    <span />
+                  </div>
+
+                  <div className="divide-y divide-gray-50">
+                    {purchaseForm.items.map((item, i) => {
+                      const selectedProd = products?.find((p: any) => p.id === item.productId)
+                      const isThung = itemUnit[i] === 'thung' && (selectedProd?.packageQty ?? 0) > 1
+                      const lineTotal = item.qty > 0 && item.costPrice > 0 ? item.qty * item.costPrice : 0
+                      return (
+                        <div key={i} className={`py-2.5 px-3 rounded-lg transition-colors ${selectedProd ? 'hover:bg-gray-50/80' : ''}`}>
+                          <div className="grid items-center gap-2" style={{gridTemplateColumns:'1fr 80px 130px 100px 44px'}}>
+
+                            {/* Tên sản phẩm */}
+                            <div className="relative min-w-0">
+                              <input
+                                className="input text-sm w-full"
+                                placeholder="Tìm theo tên, mã..."
+                                value={itemSearch[i] ?? ''}
+                                onFocus={() => setItemDropdown(i)}
+                                onChange={e => {
+                                  const v = e.target.value
+                                  setItemSearch(s => { const n = [...s]; n[i] = v; return n })
+                                  if (!v) { updatePurchaseItem(i, 'productId', ''); updatePurchaseItem(i, 'costPrice', 0) }
+                                  setItemDropdown(i)
+                                }}
+                                onBlur={() => setTimeout(() => setItemDropdown(null), 150)}
+                              />
+                              {itemDropdown === i && (
+                                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-52 overflow-y-auto">
+                                  {(products || [])
+                                    .filter((p: any) => {
+                                      const q = (itemSearch[i] ?? '').toLowerCase()
+                                      return !q || p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q)
+                                    })
+                                    .slice(0, 50)
+                                    .map((p: any) => (
+                                      <button key={p.id} type="button"
+                                        className="w-full text-left px-3 py-2.5 hover:bg-blue-50 text-sm flex justify-between items-center gap-2 border-b border-gray-50 last:border-0"
+                                        onMouseDown={() => {
+                                          updatePurchaseItem(i, 'productId', p.id)
+                                          updatePurchaseItem(i, 'costPrice', p.costPrice)
+                                          setItemSearch(s => { const n = [...s]; n[i] = p.name; return n })
+                                          setItemDropdown(null)
+                                        }}>
+                                        <span className="truncate font-medium">{p.name}</span>
+                                        <span className="text-xs text-gray-400 flex-shrink-0 font-mono">{p.code}</span>
+                                      </button>
+                                    ))}
+                                  {(products || []).filter((p: any) => {
                                     const q = (itemSearch[i] ?? '').toLowerCase()
                                     return !q || p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q)
-                                  })
-                                  .slice(0, 50)
-                                  .map((p: any) => (
-                                    <button key={p.id} type="button"
-                                      className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm flex justify-between items-center gap-2"
-                                      onMouseDown={() => {
-                                        updatePurchaseItem(i, 'productId', p.id)
-                                        updatePurchaseItem(i, 'costPrice', p.costPrice)
-                                        setItemSearch(s => { const n = [...s]; n[i] = p.name; return n })
-                                        setItemDropdown(null)
-                                      }}>
-                                      <span className="truncate">{p.name}</span>
-                                      <span className="text-xs text-gray-400 flex-shrink-0">[{p.code}]</span>
-                                    </button>
-                                  ))}
-                                {(products || []).filter((p: any) => {
-                                  const q = (itemSearch[i] ?? '').toLowerCase()
-                                  return !q || p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q)
-                                }).length === 0 && (
-                                  <p className="text-center text-gray-400 text-sm py-3">Không tìm thấy</p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                          <button type="button" title="Tạo sản phẩm mới"
-                            onClick={() => setNewProductForItemIdx(i)}
-                            className="flex-shrink-0 flex items-center gap-1 px-2 py-2 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors whitespace-nowrap mt-0.5">
-                            <PackagePlus size={14} /> Tạo mới
-                          </button>
-                          {purchaseForm.items.length > 1 && (
-                            <button type="button" onClick={() => removePurchaseItem(i)}
-                              className="text-red-400 hover:text-red-600 mt-1.5 flex-shrink-0"><X size={16} /></button>
-                          )}
-                        </div>
+                                  }).length === 0 && (
+                                    <p className="text-center text-gray-400 text-sm py-4">Không tìm thấy sản phẩm</p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
 
-                        {/* Thông tin sản phẩm được chọn */}
-                        {selectedProd && (
-                          <div className="bg-gray-50 rounded-lg px-3 py-2 flex items-center gap-2">
-                            <ProductThumb product={selectedProd} />
-                            <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap gap-2">
-                                {selectedProd.brand && <span className="text-xs text-purple-600 flex items-center gap-0.5"><Tag size={10} />{selectedProd.brand}</span>}
-                                {selectedProd.manufacturer && <span className="text-xs text-gray-400 flex items-center gap-0.5"><Building2 size={10} />{selectedProd.manufacturer}</span>}
-                              </div>
-                              {selectedProd.specification && <p className="text-xs text-gray-400">{selectedProd.specification}</p>}
-                              <p className="text-xs text-gray-500">Tồn kho: <strong>{selectedProd.stock} {selectedProd.unit}</strong> · Giá vốn hiện tại: {fmt(selectedProd.costPrice)}</p>
+                            {/* SL + unit toggle */}
+                            <div className="flex flex-col items-center gap-1">
+                              {selectedProd?.packageQty > 1 && (
+                                <div className="flex rounded-lg overflow-hidden border border-gray-200 text-xs w-full">
+                                  <button type="button"
+                                    onClick={() => setItemUnit(s => { const n = [...s]; n[i] = 'le'; return n })}
+                                    className={`flex-1 py-0.5 font-medium transition-colors ${!isThung ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
+                                    {selectedProd.unit || 'Lẻ'}
+                                  </button>
+                                  <button type="button"
+                                    onClick={() => setItemUnit(s => { const n = [...s]; n[i] = 'thung'; return n })}
+                                    className={`flex-1 py-0.5 font-medium transition-colors ${isThung ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
+                                    {selectedProd.packageUnit || 'Th'}
+                                  </button>
+                                </div>
+                              )}
+                              <input className="input text-sm text-center w-full font-semibold" type="number" min="1" placeholder="SL"
+                                value={item.qty} onChange={e => updatePurchaseItem(i, 'qty', +e.target.value)} required />
+                            </div>
+
+                            {/* Đơn giá */}
+                            <input className="input text-sm text-right font-medium" inputMode="numeric" placeholder="0"
+                              value={fmtMoney(item.costPrice)}
+                              onChange={e => updatePurchaseItem(i, 'costPrice', parseMoney(e.target.value))} required />
+
+                            {/* Thành tiền */}
+                            <div className="text-right">
+                              {lineTotal > 0
+                                ? <span className="text-sm font-bold text-blue-600">{fmt(lineTotal)}</span>
+                                : <span className="text-gray-300 text-sm">—</span>}
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center justify-center gap-0.5">
+                              <button type="button" title="Tạo sản phẩm mới"
+                                onClick={() => setNewProductForItemIdx(i)}
+                                className="p-1.5 text-green-500 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">
+                                <PackagePlus size={14} />
+                              </button>
+                              {purchaseForm.items.length > 1 && (
+                                <button type="button" onClick={() => removePurchaseItem(i)}
+                                  className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
                             </div>
                           </div>
-                        )}
 
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="text-xs text-gray-500 mb-1 block">Số lượng nhập *</label>
-                            <input className="input text-sm" type="number" min="1" placeholder="SL"
-                              value={item.qty} onChange={e => updatePurchaseItem(i, 'qty', +e.target.value)} required />
-                          </div>
-                          <div>
-                            <label className="text-xs text-gray-500 mb-1 block">Giá nhập (đ) *</label>
-                            <input className="input text-sm" type="number" min="0" placeholder="Giá nhập"
-                              value={item.costPrice} onChange={e => updatePurchaseItem(i, 'costPrice', +e.target.value)} required />
-                          </div>
+                          {/* Info dòng phụ */}
+                          {selectedProd && (
+                            <div className="flex gap-3 text-xs mt-1.5 flex-wrap pl-0.5">
+                              {selectedProd.brand && <span className="text-purple-500 font-medium">{selectedProd.brand}</span>}
+                              <span className="text-gray-400">Tồn: <strong className="text-gray-600">{selectedProd.stock} {selectedProd.unit}</strong></span>
+                              <span className="text-gray-400">Giá vốn: <strong className="text-gray-600">{fmt(selectedProd.costPrice)}</strong></span>
+                              {isThung && item.qty > 0 && (
+                                <span className="text-blue-500 font-medium">{item.qty} {selectedProd.packageUnit} × {selectedProd.packageQty} = {item.qty * selectedProd.packageQty} {selectedProd.unit}</span>
+                              )}
+                              {isThung && item.costPrice > 0 && (
+                                <span className="text-gray-400">= {fmt(item.costPrice / selectedProd.packageQty)}/{selectedProd.unit}</span>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        {item.qty > 0 && item.costPrice > 0 && (
-                          <p className="text-xs text-right text-blue-600 font-medium">
-                            Thành tiền: {fmt(item.qty * item.costPrice)}
-                          </p>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Tổng & thanh toán */}
-              <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
-                <div className="flex justify-between font-bold text-base">
-                  <span>Tổng giá trị nhập</span>
-                  <span className="text-blue-600">{fmt(purchaseTotal)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <label className="text-gray-600">Đã trả ngay</label>
-                  <input type="number" min="0" max={purchaseTotal}
-                    className="input text-sm text-right w-40"
-                    value={purchaseForm.paid}
-                    onChange={e => setPurchaseForm(p => ({ ...p, paid: +e.target.value }))} />
-                </div>
-                {purchaseTotal - purchaseForm.paid > 0 && (
-                  <div className="flex justify-between text-red-500 font-medium">
-                    <span>Còn nợ NCC</span>
-                    <span>{fmt(purchaseTotal - purchaseForm.paid)}</span>
+                      )
+                    })}
                   </div>
-                )}
+                </div>
+
+                {/* Ghi chú */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">Ghi chú</label>
+                  <input className="input" placeholder="Ghi chú phiếu nhập..."
+                    value={purchaseForm.note} onChange={e => setPurchaseForm(p => ({ ...p, note: e.target.value }))} />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">Ghi chú</label>
-                <input className="input" placeholder="Ghi chú phiếu nhập..."
-                  value={purchaseForm.note} onChange={e => setPurchaseForm(p => ({ ...p, note: e.target.value }))} />
+              {/* Footer: tổng + nút */}
+              <div className="border-t bg-gray-50/80 px-6 py-4 flex-shrink-0 rounded-b-2xl space-y-3">
+                {/* Summary row */}
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-6 text-sm flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-500">Tổng giá trị:</span>
+                      <span className="text-lg font-bold text-blue-600">{fmt(purchaseTotal)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-gray-500 whitespace-nowrap">Đã trả ngay:</label>
+                      <input inputMode="numeric" placeholder="0"
+                        className="input text-sm text-right w-36 font-semibold"
+                        value={fmtMoney(purchaseForm.paid)}
+                        onChange={e => setPurchaseForm(p => ({ ...p, paid: parseMoney(e.target.value) }))} />
+                    </div>
+                    {purchaseTotal - purchaseForm.paid > 0 && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-500">Còn nợ NCC:</span>
+                        <span className="font-bold text-red-500">{fmt(purchaseTotal - purchaseForm.paid)}</span>
+                      </div>
+                    )}
+                    {purchaseForm.paid > 0 && purchaseTotal - purchaseForm.paid <= 0 && (
+                      <span className="text-green-600 font-semibold text-xs bg-green-50 px-2 py-1 rounded-full">✓ Đã thanh toán đủ</span>
+                    )}
+                  </div>
+
+                  {/* Buttons */}
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button type="button" onClick={() => { setShowPurchase(false); setEditingPurchaseId(null) }}
+                      className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                      Hủy
+                    </button>
+                    <button type="submit" disabled={purchase.isPending}
+                      className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2 shadow-sm">
+                      {purchase.isPending
+                        ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Đang lưu...</>
+                        : editingPurchaseId
+                          ? <><FileText size={15} />Lưu chỉnh sửa</>
+                          : <><PackagePlus size={15} />Xác nhận nhập kho</>}
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex gap-3 justify-end pt-2">
-                <button type="button" onClick={() => setShowPurchase(false)} className="btn-outline">Hủy</button>
-                <button type="submit" disabled={purchase.isPending} className="btn-primary px-6">
-                  {purchase.isPending ? 'Đang lưu...' : 'Xác nhận nhập kho'}
-                </button>
-              </div>
             </form>
           </div>
         </div>
@@ -1315,7 +1423,13 @@ export default function Stock() {
                 <h2 className="text-lg font-bold">Chi tiết phiếu nhập</h2>
                 <p className="text-sm font-mono text-blue-600 mt-0.5">{viewPurchase.code}</p>
               </div>
-              <button onClick={() => setViewPurchase(null)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => openEditPurchase(viewPurchase)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors">
+                  <FileText size={14} /> Chỉnh sửa
+                </button>
+                <button onClick={() => setViewPurchase(null)} className="text-gray-400 hover:text-gray-600 p-1.5 hover:bg-gray-100 rounded-lg transition-colors"><X size={18} /></button>
+              </div>
             </div>
 
             <div className="overflow-y-auto p-6 space-y-5">

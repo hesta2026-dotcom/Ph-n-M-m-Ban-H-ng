@@ -2,13 +2,15 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../../services/api'
 import toast from 'react-hot-toast'
-import { Eye, Plus, FileText, CheckCircle, XCircle, RotateCcw, Search, FileSpreadsheet, Trash2 } from 'lucide-react'
+import { Eye, Plus, FileText, CheckCircle, XCircle, RotateCcw, Search, FileSpreadsheet, Trash2, Pencil, Minus, X } from 'lucide-react'
 import CreateOrderModal from './CreateOrderModal'
 import ExportSlip from './ExportSlip'
 import { exportExcel, exportPDF, PRESETS, fmtPeriod } from '../../utils/export'
 import ColumnPicker, { ColDef } from '../../components/ColumnPicker'
 
 const fmt = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
+const fmtMoney = (n: number) => n === 0 ? '' : n.toLocaleString('vi-VN')
+const parseMoney = (s: string) => +s.replace(/[^0-9]/g, '') || 0
 const STATUS_LABEL: any = { PENDING: 'Chờ xử lý', COMPLETED: 'Hoàn thành', CANCELLED: 'Đã hủy', REFUNDED: 'Hoàn hàng' }
 const STATUS_CLASS: any = { PENDING: 'badge-yellow', COMPLETED: 'badge-green', CANCELLED: 'badge-red', REFUNDED: 'badge-blue' }
 const PAY_LABEL: any = { CASH: 'Tiền mặt', CARD: 'Thẻ', TRANSFER: 'Chuyển khoản', DEBT: 'Ghi nợ', MIXED: 'Hỗn hợp' }
@@ -49,6 +51,12 @@ export default function Orders() {
   const [showCreate, setShowCreate] = useState(false)
   const [visible, setVisible] = useState<Set<string>>(() => new Set(COLS.map(c => c.key)))
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [editMode, setEditMode] = useState(false)
+  const [editCart, setEditCart] = useState<any[]>([])
+  const [editDiscount, setEditDiscount] = useState(0)
+  const [editNote, setEditNote] = useState('')
+  const [editSearch, setEditSearch] = useState('')
+  const [editDropdown, setEditDropdown] = useState(false)
 
   const applyPreset = (p: typeof PRESETS[number]) => {
     const [f, t] = p.getDates(); setFrom(f); setTo(t); setActivePreset(p.label); setPage(1)
@@ -81,6 +89,63 @@ export default function Orders() {
     onSuccess: () => { toast.success('Đã xóa đơn hàng'); qc.invalidateQueries({ queryKey: ['orders'] }) },
     onError: (e: any) => toast.error(e.response?.data?.message || 'Không thể xóa')
   })
+
+  const { data: editProducts } = useQuery({
+    queryKey: ['products-edit-search', editSearch],
+    queryFn: () => api.get(`/products?search=${editSearch}&limit=8`).then(r => r.data.data),
+    enabled: editSearch.length > 0
+  })
+
+  const { mutate: updateOrder, isPending: isSaving } = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => api.put(`/orders/${id}`, data).then(r => r.data),
+    onSuccess: (updated) => {
+      toast.success('Đã cập nhật đơn hàng')
+      setSelected(updated)
+      setEditMode(false)
+      qc.invalidateQueries({ queryKey: ['orders'] })
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Lỗi cập nhật')
+  })
+
+  const startEdit = () => {
+    if (!selected) return
+    setEditCart(selected.items.map((i: any) => ({
+      productId: i.productId,
+      name: i.product?.name || '',
+      code: i.product?.code || '',
+      qty: i.qty,
+      price: i.price,
+      unit: i.unit || i.product?.unit || 'cái'
+    })))
+    setEditDiscount(selected.discount || 0)
+    setEditNote(selected.note || '')
+    setEditSearch('')
+    setEditMode(true)
+  }
+
+  const addEditProduct = (p: any) => {
+    setEditCart(prev => {
+      const exists = prev.find(i => i.productId === p.id)
+      if (exists) return prev.map(i => i.productId === p.id ? { ...i, qty: i.qty + 1 } : i)
+      return [...prev, { productId: p.id, name: p.name, code: p.code, qty: 1, price: p.price, unit: p.unit || 'cái' }]
+    })
+    setEditSearch('')
+    setEditDropdown(false)
+  }
+
+  const saveEdit = () => {
+    if (!selected || editCart.length === 0) return
+    updateOrder({
+      id: selected.id,
+      data: {
+        items: editCart.map(i => ({ productId: i.productId, qty: i.qty, price: i.price, unit: i.unit })),
+        discount: editDiscount,
+        note: editNote,
+        paymentMethod: selected.paymentMethod,
+        amountPaid: selected.amountPaid
+      }
+    })
+  }
 
   const delBulk = async () => {
     if (!confirm(`Xóa ${selectedIds.size} đơn hàng đã chọn? Thao tác không thể hoàn tác.`)) return
@@ -304,21 +369,34 @@ export default function Orders() {
                 <span className={`badge ${STATUS_CLASS[selected.status]}`}>{STATUS_LABEL[selected.status]}</span>
               </div>
               <div className="flex items-center gap-2">
-                <button title="In phiếu xuất hàng" onClick={() => { setSlipOrder(selected); setSelected(null) }}
-                  className="btn-outline flex items-center gap-1.5 py-1.5 text-sm"><FileText size={15} /> In phiếu</button>
-                <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 text-xl ml-1">x</button>
+                {!editMode && (
+                  <>
+                    <button title="In phiếu xuất hàng" onClick={() => { setSlipOrder(selected); setSelected(null) }}
+                      className="btn-outline flex items-center gap-1.5 py-1.5 text-sm"><FileText size={15} /> In phiếu</button>
+                    <button onClick={startEdit}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-500 text-blue-600 text-sm hover:bg-blue-50 transition-colors">
+                      <Pencil size={14} /> Chỉnh sửa
+                    </button>
+                  </>
+                )}
+                <button onClick={() => { setSelected(null); setEditMode(false) }} className="text-gray-400 hover:text-gray-600 ml-1 p-1 hover:bg-gray-100 rounded-lg">
+                  <X size={20} />
+                </button>
               </div>
             </div>
             <div className="overflow-y-auto p-6 space-y-5">
+              {/* Thông tin chung */}
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div><span className="text-gray-500">Khách hàng: </span><strong>{selected.customer?.name || 'Khách lẻ'}</strong></div>
                 <div><span className="text-gray-500">SĐT: </span><strong>{selected.customer?.phone || '-'}</strong></div>
                 <div><span className="text-gray-500">Nhân viên: </span><strong>{selected.user?.name}</strong></div>
                 <div><span className="text-gray-500">Thanh toán: </span><strong>{PAY_LABEL[selected.paymentMethod]}</strong></div>
                 <div><span className="text-gray-500">Thời gian: </span><strong>{new Date(selected.createdAt).toLocaleString('vi-VN')}</strong></div>
-                {selected.note && <div className="col-span-2"><span className="text-gray-500">Ghi chú: </span><strong>{selected.note}</strong></div>}
+                {!editMode && selected.note && <div className="col-span-2"><span className="text-gray-500">Ghi chú: </span><strong>{selected.note}</strong></div>}
               </div>
-              {TRANSITIONS[selected.status]?.length > 0 && (
+
+              {/* Cập nhật trạng thái — ẩn khi đang edit */}
+              {!editMode && TRANSITIONS[selected.status]?.length > 0 && (
                 <div className="bg-gray-50 rounded-xl p-4">
                   <p className="text-sm font-semibold text-gray-700 mb-3">Cập nhật trạng thái</p>
                   <div className="flex gap-3">
@@ -331,36 +409,166 @@ export default function Orders() {
                   </div>
                 </div>
               )}
-              <div>
-                <p className="text-sm font-semibold text-gray-700 mb-2">Sản phẩm</p>
-                <table className="w-full text-sm border rounded-lg overflow-hidden">
-                  <thead className="bg-gray-50">
-                    <tr>{['Sản phẩm', 'ĐVT', 'SL', 'Đơn giá', 'Thành tiền'].map(h => (
-                      <th key={h} className="px-3 py-2 text-left font-medium text-gray-600">{h}</th>
-                    ))}</tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {selected.items?.map((item: any) => (
-                      <tr key={item.id}>
-                        <td className="px-3 py-2"><p>{item.product?.name}</p><p className="text-gray-400 text-xs font-mono">{item.product?.code}</p></td>
-                        <td className="px-3 py-2 text-gray-500">{item.unit || item.product?.unit || 'cai'}</td>
-                        <td className="px-3 py-2 font-medium">{item.qty}</td>
-                        <td className="px-3 py-2">{fmt(item.price)}</td>
-                        <td className="px-3 py-2 font-semibold text-blue-600">{fmt(item.total)}</td>
-                      </tr>
+
+              {/* ===== CHẾ ĐỘ XEM ===== */}
+              {!editMode && (
+                <>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 mb-2">Sản phẩm</p>
+                    <table className="w-full text-sm border rounded-lg overflow-hidden">
+                      <thead className="bg-gray-50">
+                        <tr>{['Sản phẩm', 'ĐVT', 'SL', 'Đơn giá', 'Thành tiền'].map(h => (
+                          <th key={h} className="px-3 py-2 text-left font-medium text-gray-600">{h}</th>
+                        ))}</tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {selected.items?.map((item: any) => (
+                          <tr key={item.id}>
+                            <td className="px-3 py-2"><p>{item.product?.name}</p><p className="text-gray-400 text-xs font-mono">{item.product?.code}</p></td>
+                            <td className="px-3 py-2 text-gray-500">{item.unit || item.product?.unit || 'cái'}</td>
+                            <td className="px-3 py-2 font-medium">{item.qty}</td>
+                            <td className="px-3 py-2">{fmt(item.price)}</td>
+                            <td className="px-3 py-2 font-semibold text-blue-600">{fmt(item.total)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="flex justify-end">
+                    <div className="w-64 space-y-1.5 text-sm">
+                      <div className="flex justify-between"><span className="text-gray-500">Tạm tính</span><span>{fmt(selected.subtotal)}</span></div>
+                      {selected.discount > 0 && <div className="flex justify-between text-red-500"><span>Giảm giá</span><span>- {fmt(selected.discount)}</span></div>}
+                      <div className="flex justify-between font-bold text-base pt-2 border-t"><span>Tổng cộng</span><span className="text-blue-600">{fmt(selected.total)}</span></div>
+                      {selected.amountPaid > 0 && <div className="flex justify-between text-gray-500 text-xs"><span>Tiền nhận</span><span>{fmt(selected.amountPaid)}</span></div>}
+                      {selected.change > 0 && <div className="flex justify-between text-green-600 text-xs"><span>Tiền thối</span><span>{fmt(selected.change)}</span></div>}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* ===== CHẾ ĐỘ CHỈNH SỬA ===== */}
+              {editMode && (
+                <div className="space-y-4">
+                  {/* Tìm thêm sản phẩm */}
+                  <div className="relative">
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Thêm sản phẩm</label>
+                    <div className="relative">
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input className="input pl-9 text-sm w-full" placeholder="Tìm theo tên, mã sản phẩm..."
+                        value={editSearch}
+                        onChange={e => { setEditSearch(e.target.value); setEditDropdown(true) }}
+                        onFocus={() => setEditDropdown(true)}
+                        onBlur={() => setTimeout(() => setEditDropdown(false), 150)}
+                      />
+                    </div>
+                    {editDropdown && editProducts && editProducts.length > 0 && (
+                      <div className="absolute z-20 w-full bg-white border rounded-xl shadow-lg mt-1 max-h-48 overflow-y-auto">
+                        {editProducts.map((p: any) => (
+                          <button key={p.id} onMouseDown={() => addEditProduct(p)}
+                            className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm flex justify-between items-center border-b last:border-b-0">
+                            <div>
+                              <p className="font-medium">{p.name}</p>
+                              <p className="text-xs text-gray-400">{p.code}</p>
+                            </div>
+                            <span className="text-blue-600 font-medium flex-shrink-0 ml-4">{fmt(p.price)}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Header cột */}
+                  <div className="flex items-center gap-2 text-xs text-gray-400 px-1">
+                    <span className="flex-1">Sản phẩm</span>
+                    <span className="w-24 text-center">Số lượng</span>
+                    <span className="w-28 text-right">Đơn giá</span>
+                    <span className="w-20 text-right">Thành tiền</span>
+                    <span className="w-6"></span>
+                  </div>
+
+                  {/* Danh sách sản phẩm chỉnh sửa */}
+                  <div className="border rounded-xl divide-y overflow-hidden">
+                    {editCart.map((item, idx) => (
+                      <div key={item.productId} className="flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{item.name}</p>
+                          <p className="text-xs text-gray-400 font-mono">{item.code}</p>
+                        </div>
+                        <div className="flex items-center gap-1 w-24 justify-center flex-shrink-0">
+                          <button onClick={() => setEditCart(c => c.map((i, j) => j === idx ? { ...i, qty: Math.max(1, i.qty - 1) } : i))}
+                            className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center">
+                            <Minus size={11} />
+                          </button>
+                          <input type="number" min={1} value={item.qty}
+                            onChange={e => setEditCart(c => c.map((i, j) => j === idx ? { ...i, qty: Math.max(1, +e.target.value) } : i))}
+                            className="w-10 text-center border rounded-lg text-sm py-1 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                          <button onClick={() => setEditCart(c => c.map((i, j) => j === idx ? { ...i, qty: i.qty + 1 } : i))}
+                            className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center">
+                            <Plus size={11} />
+                          </button>
+                        </div>
+                        <input inputMode="numeric" value={fmtMoney(item.price)}
+                          onChange={e => setEditCart(c => c.map((i, j) => j === idx ? { ...i, price: parseMoney(e.target.value) } : i))}
+                          className="w-28 border rounded-lg text-sm py-1.5 px-2 text-right flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                        <span className="w-20 text-right text-sm font-semibold text-blue-600 flex-shrink-0 whitespace-nowrap">
+                          {fmt(item.qty * item.price)}
+                        </span>
+                        <button onClick={() => setEditCart(c => c.filter((_, j) => j !== idx))}
+                          className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg flex-shrink-0">
+                          <X size={13} />
+                        </button>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="flex justify-end">
-                <div className="w-64 space-y-1.5 text-sm">
-                  <div className="flex justify-between"><span className="text-gray-500">Tạm tính</span><span>{fmt(selected.subtotal)}</span></div>
-                  {selected.discount > 0 && <div className="flex justify-between text-red-500"><span>Giảm giá</span><span>- {fmt(selected.discount)}</span></div>}
-                  <div className="flex justify-between font-bold text-base pt-2 border-t"><span>Tổng cộng</span><span className="text-blue-600">{fmt(selected.total)}</span></div>
-                  {selected.amountPaid > 0 && <div className="flex justify-between text-gray-500 text-xs"><span>Tiền nhận</span><span>{fmt(selected.amountPaid)}</span></div>}
-                  {selected.change > 0 && <div className="flex justify-between text-green-600 text-xs"><span>Tiền thối</span><span>{fmt(selected.change)}</span></div>}
+                    {editCart.length === 0 && (
+                      <p className="text-center text-gray-400 text-sm py-6">Chưa có sản phẩm</p>
+                    )}
+                  </div>
+
+                  {/* Giảm giá & Ghi chú */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Giảm giá (đ)</label>
+                      <input inputMode="numeric" className="input text-sm text-right w-full"
+                        value={fmtMoney(editDiscount)}
+                        onChange={e => setEditDiscount(parseMoney(e.target.value))} />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Ghi chú</label>
+                      <input className="input text-sm w-full" value={editNote}
+                        onChange={e => setEditNote(e.target.value)} />
+                    </div>
+                  </div>
+
+                  {/* Tổng */}
+                  <div className="flex justify-end text-sm">
+                    <div className="space-y-1 w-56">
+                      <div className="flex justify-between text-gray-500">
+                        <span>Tạm tính</span>
+                        <span>{fmt(editCart.reduce((s, i) => s + i.qty * i.price, 0))}</span>
+                      </div>
+                      {editDiscount > 0 && (
+                        <div className="flex justify-between text-red-500">
+                          <span>Giảm giá</span><span>- {fmt(editDiscount)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-bold text-base border-t pt-2">
+                        <span>Tổng cộng</span>
+                        <span className="text-blue-600">{fmt(editCart.reduce((s, i) => s + i.qty * i.price, 0) - editDiscount)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Nút hành động */}
+                  <div className="flex justify-end gap-2 pt-2 border-t">
+                    <button onClick={() => setEditMode(false)}
+                      className="px-4 py-2 text-sm border rounded-lg hover:bg-gray-50">Hủy</button>
+                    <button onClick={saveEdit} disabled={isSaving || editCart.length === 0}
+                      className="px-5 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium">
+                      {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
