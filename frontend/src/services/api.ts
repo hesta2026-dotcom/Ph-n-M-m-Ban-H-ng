@@ -1,7 +1,8 @@
 import axios from 'axios'
 
-// Dùng VITE_API_URL trong production (Railway/Render), fallback về /api khi dev
-const baseURL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api'
+const NGROK_URL = 'https://plausible-quarrel-comprised.ngrok-free.dev'
+const isDev = window.location.hostname === 'localhost' || window.location.hostname.startsWith('192.168.')
+const baseURL = isDev ? '/api' : `${NGROK_URL}/api`
 
 const api = axios.create({ baseURL, withCredentials: true })
 
